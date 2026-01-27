@@ -20,6 +20,7 @@ import edu.wpi.first.math.estimator.PoseEstimator;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
@@ -234,9 +235,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     private final SwerveDrivePoseEstimator m_poseEstimator = 
         new SwerveDrivePoseEstimator(
-            getKinematics(), 
-            kBlueAlliancePerspectiveRotation, 
-            null,
+            getKinematics(),
+            kBlueAlliancePerspectiveRotation,
+            getState().ModulePositions,
             LimelightHelpers.getBotPose2d_wpiBlue("limelight1")
             );
 
@@ -244,12 +245,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     public void periodic() {
         doRejectUpdate = false;
         //Pose Estimator
-        // m_poseEstimator.update(kBlueAlliancePerspectiveRotation, new SwerveModulePosition[] {
-        //   m_frontLeft.getPosition(),
-        //   m_frontRight.getPosition(),
-        //   m_backLeft.getPosition(),
-        //   m_backRight.copy() 
-        // });
+        m_poseEstimator.update(kBlueAlliancePerspectiveRotation, getState().ModulePositions);
 
         LimelightHelpers.SetRobotOrientation("limelight1", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
         LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight1");
