@@ -2,18 +2,25 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.time.Period;
 import java.util.Optional;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
+import com.ctre.phoenix6.swerve.SwerveModule;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+import com.ctre.phoenix6.swerve.jni.SwerveJNI.ModulePosition;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.estimator.PoseEstimator;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -23,6 +30,9 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.LimelightHelpers;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 
@@ -37,6 +47,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private static final double kSimLoopPeriod = 0.004; // 4 ms
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
+    private boolean doRejectUpdate;
+    private final Field2d m_field = new Field2d();
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
@@ -220,8 +232,41 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
+    private final SwerveDrivePoseEstimator m_poseEstimator = 
+        new SwerveDrivePoseEstimator(
+            getKinematics(), 
+            kBlueAlliancePerspectiveRotation, 
+            null,
+            LimelightHelpers.getBotPose2d_wpiBlue("limelight1")
+            );
+
     @Override
     public void periodic() {
+        doRejectUpdate = false;
+        //Pose Estimator
+        // m_poseEstimator.update(kBlueAlliancePerspectiveRotation, new SwerveModulePosition[] {
+        //   m_frontLeft.getPosition(),
+        //   m_frontRight.getPosition(),
+        //   m_backLeft.getPosition(),
+        //   m_backRight.copy() 
+        // });
+
+        LimelightHelpers.SetRobotOrientation("limelight1", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
+        LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight1");
+        if (Math.abs(getPigeon2().getAngularVelocityZWorld().getValueAsDouble()) > 720){
+            doRejectUpdate = true;
+        }
+        if (mt2.tagCount == 0){
+            doRejectUpdate = true;
+        }
+        if (!doRejectUpdate){
+            m_poseEstimator.setVisionMeasurementStdDevs(VecBuilder.fill(.7,.7,9999999));
+            m_poseEstimator.addVisionMeasurement(mt2.pose, mt2.timestampSeconds);
+        }
+        //Uploading Field and Pose
+        m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
+        SmartDashboard.putData("Field", m_field);
+
         /*
          * Periodically try to apply the operator perspective.
          * If we haven't applied the operator perspective before, then we should apply it regardless of DS state.
@@ -255,7 +300,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         });
         m_simNotifier.startPeriodic(kSimLoopPeriod);
     }
-
+    
     /**
      * Adds a vision measurement to the Kalman Filter. This will correct the odometry pose estimate
      * while still accounting for measurement noise.
