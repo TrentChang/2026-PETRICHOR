@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
+import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModule;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
@@ -53,6 +54,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private boolean doRejectUpdate;
     private boolean doBooleanDog;
     private final Field2d m_field = new Field2d();
+    private final Pigeon2 m_pigeon2 = new Pigeon2(31);
+
+    
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
@@ -198,6 +202,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         Matrix<N3, N1> visionStandardDeviation,
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
+
         super(drivetrainConstants, odometryUpdateFrequency, odometryStandardDeviation, visionStandardDeviation, modules);
         if (Utils.isSimulation()) {
             startSimThread();
@@ -297,7 +302,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             m_poseEstimator.update(kBlueAlliancePerspectiveRotation, getState().ModulePositions);
 
             LimelightHelpers.SetRobotOrientation("limelight-one", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
-            if (Math.abs(getPigeon2().getAngularVelocityZWorld().getValueAsDouble()) > 720){
+            if (Math.abs(m_pigeon2.getAngularVelocityZWorld().getValueAsDouble()) > 720){
                 doRejectUpdate = true;
             } 
             if (mt2.tagCount == 0){
@@ -309,15 +314,22 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             }
             //Uploading Field and Pose
             m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
+            // double oneRotation = LimelightHelpers.getBotPose2d("limelight-one").getRotation().getDegrees(); 
+            // double twoRotation = LimelightHelpers.getBotPose2d("limelight-two").getRotation().getDegrees();
+            // Rotation2d avrRotation = new Rotation2d((oneRotation - twoRotation) / 2);
+            // SmartDashboard.putNumber("one", oneRotation);
+            // SmartDashboard.putNumber("two", twoRotation);
+            m_field.setRobotPose(m_poseEstimator.getEstimatedPosition().getMeasureX(), m_poseEstimator.getEstimatedPosition().getMeasureY(), LimelightHelpers.getBotPose2d("limelight-one").getRotation());
         }
         else {
             m_swerveDriveOdometry.update(kBlueAlliancePerspectiveRotation, getState().ModulePositions);
             m_field.setRobotPose(m_swerveDriveOdometry.getPoseMeters());
-        }
+            m_field.setRobotPose(m_swerveDriveOdometry.getPoseMeters().getMeasureX(), m_swerveDriveOdometry.getPoseMeters().getMeasureY(), m_pigeon2.getRotation2d());
+        }   
         
         SmartDashboard.putData("Field2D", m_field);
 
-        /*
+        /*%
          * Periodically try to apply the operator perspective.
          * If we haven't applied the operator perspective before, then we should apply it regardless of DS state.
          * This allows us to correct the perspective in case the robot code restarts mid-match.
