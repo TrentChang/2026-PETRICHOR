@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.swerve;
 
 import static edu.wpi.first.units.Units.*;
 
@@ -21,11 +21,13 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -49,6 +51,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
     private boolean doRejectUpdate;
+    private boolean doBooleanDog;
     private final Field2d m_field = new Field2d();
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
@@ -233,35 +236,86 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
+    public Pose2d swervePoseCombination(){
+        double x1 = LimelightHelpers.getBotPose2d_wpiBlue("Limelight-one").getX();
+        double y1 = LimelightHelpers.getBotPose2d_wpiBlue("Limelight-one").getY();
+        double rotation1 = LimelightHelpers.getBotPose2d("Limelgiht-one").getRotation().getDegrees();
+        double x2 = LimelightHelpers.getBotPose2d_wpiBlue("Limelight-two").getX();
+        double y2 = LimelightHelpers.getBotPose2d_wpiBlue("Limelight-two").getY();
+        double rotation2 = LimelightHelpers.getBotPose2d("Limelgiht-two").getRotation().getDegrees();
+
+        double storedPoseX = (x1 + x2) / 2;
+        double storedPoseY = (y1 + y2) / 2;
+        double storedPoseDeg = (rotation1 + rotation2) / 2;
+        Translation2d m_translation = new Translation2d(storedPoseX, storedPoseY);
+        Rotation2d m_rotation = new Rotation2d(storedPoseDeg);
+        
+        return new Pose2d(m_translation, m_rotation);
+    }
+
+    //Pose estimator
     private final SwerveDrivePoseEstimator m_poseEstimator = 
         new SwerveDrivePoseEstimator(
             getKinematics(),
             kBlueAlliancePerspectiveRotation,
             getState().ModulePositions,
-            LimelightHelpers.getBotPose2d_wpiBlue("limelight1")
+            LimelightHelpers.getBotPose2d_wpiBlue("limelight-one")
+            );
+
+    //Pose odometry
+    private final SwerveDriveOdometry m_swerveDriveOdometry = 
+        new SwerveDriveOdometry(
+            getKinematics(), 
+            kBlueAlliancePerspectiveRotation, 
+            getState().ModulePositions
             );
 
     @Override
     public void periodic() {
         doRejectUpdate = false;
-        //Pose Estimator
-        m_poseEstimator.update(kBlueAlliancePerspectiveRotation, getState().ModulePositions);
+        doBooleanDog = false;
+        LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
 
-        LimelightHelpers.SetRobotOrientation("limelight1", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
-        LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight1");
-        if (Math.abs(getPigeon2().getAngularVelocityZWorld().getValueAsDouble()) > 720){
-            doRejectUpdate = true;
+        if (LimelightHelpers.getFiducialID("limelgiht-one") != -1 && LimelightHelpers.getFiducialID("limelgiht-two")  != -1) {
+            LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose = swervePoseCombination();
+            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
         }
-        if (mt2.tagCount == 0){
-            doRejectUpdate = true;
+        else if (LimelightHelpers.getFiducialID("limelgiht-one") != -1) {
+            LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose = LimelightHelpers.getBotPose2d_wpiBlue("limelight-one");
+            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
         }
-        if (!doRejectUpdate){
-            m_poseEstimator.setVisionMeasurementStdDevs(VecBuilder.fill(.7,.7,9999999));
-            m_poseEstimator.addVisionMeasurement(mt2.pose, mt2.timestampSeconds);
+        else if (LimelightHelpers.getFiducialID("limelgiht-two") != -1) {
+            LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose = LimelightHelpers.getBotPose2d_wpiBlue("limelight-two");
+            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
         }
-        //Uploading Field and Pose
-        m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
-        SmartDashboard.putData("Field", m_field);
+        else {
+            doBooleanDog = true;
+        }
+
+        //Pose Estimator
+        if (!doBooleanDog) {
+            m_poseEstimator.update(kBlueAlliancePerspectiveRotation, getState().ModulePositions);
+
+            LimelightHelpers.SetRobotOrientation("limelight-one", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
+            if (Math.abs(getPigeon2().getAngularVelocityZWorld().getValueAsDouble()) > 720){
+                doRejectUpdate = true;
+            } 
+            if (mt2.tagCount == 0){
+                doRejectUpdate = true;
+            }
+            if (!doRejectUpdate){
+                m_poseEstimator.setVisionMeasurementStdDevs(VecBuilder.fill(.7,.7,9999999));
+                m_poseEstimator.addVisionMeasurement(mt2.pose, mt2.timestampSeconds);
+            }
+            //Uploading Field and Pose
+            m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
+        }
+        else {
+            m_swerveDriveOdometry.update(kBlueAlliancePerspectiveRotation, getState().ModulePositions);
+            m_field.setRobotPose(m_swerveDriveOdometry.getPoseMeters());
+        }
+        
+        SmartDashboard.putData("Field2D", m_field);
 
         /*
          * Periodically try to apply the operator perspective.
