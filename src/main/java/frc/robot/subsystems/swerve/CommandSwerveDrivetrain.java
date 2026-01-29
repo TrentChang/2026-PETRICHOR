@@ -56,8 +56,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final Field2d m_field = new Field2d();
     private final Pigeon2 m_pigeon2 = new Pigeon2(31);
 
-    
-
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
     /* Red alliance sees forward as 180 degrees (toward blue alliance wall) */
@@ -201,8 +199,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         Matrix<N3, N1> odometryStandardDeviation,
         Matrix<N3, N1> visionStandardDeviation,
         SwerveModuleConstants<?, ?, ?>... modules
-    ) {
-
+    ) { 
         super(drivetrainConstants, odometryUpdateFrequency, odometryStandardDeviation, visionStandardDeviation, modules);
         if (Utils.isSimulation()) {
             startSimThread();
@@ -241,20 +238,24 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
+    public Rotation2d swerveRotationCombination(){
+        double rotation1 = LimelightHelpers.getBotPose2d("limelgiht-one").getRotation().getDegrees();
+        double rotation2 = LimelightHelpers.getBotPose2d("limelgiht-two").getRotation().getDegrees();
+        double storedPoseDeg = (rotation1 + rotation2) / 2;
+        return new Rotation2d(storedPoseDeg);
+    }
+
     public Pose2d swervePoseCombination(){
-        double x1 = LimelightHelpers.getBotPose2d_wpiBlue("Limelight-one").getX();
-        double y1 = LimelightHelpers.getBotPose2d_wpiBlue("Limelight-one").getY();
-        double rotation1 = LimelightHelpers.getBotPose2d("Limelgiht-one").getRotation().getDegrees();
-        double x2 = LimelightHelpers.getBotPose2d_wpiBlue("Limelight-two").getX();
-        double y2 = LimelightHelpers.getBotPose2d_wpiBlue("Limelight-two").getY();
-        double rotation2 = LimelightHelpers.getBotPose2d("Limelgiht-two").getRotation().getDegrees();
+        double x1 = LimelightHelpers.getBotPose2d_wpiBlue("limelight-one").getX();
+        double y1 = LimelightHelpers.getBotPose2d_wpiBlue("limelight-one").getY();
+        double x2 = LimelightHelpers.getBotPose2d_wpiBlue("limelight-two").getX();
+        double y2 = LimelightHelpers.getBotPose2d_wpiBlue("limelight-two").getY();
 
         double storedPoseX = (x1 + x2) / 2;
         double storedPoseY = (y1 + y2) / 2;
-        double storedPoseDeg = (rotation1 + rotation2) / 2;
-        Translation2d m_translation = new Translation2d(storedPoseX, storedPoseY);
-        Rotation2d m_rotation = new Rotation2d(storedPoseDeg);
         
+        Translation2d m_translation = new Translation2d(storedPoseX, storedPoseY);
+        Rotation2d m_rotation = swerveRotationCombination();
         return new Pose2d(m_translation, m_rotation);
     }
 
@@ -262,7 +263,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveDrivePoseEstimator m_poseEstimator = 
         new SwerveDrivePoseEstimator(
             getKinematics(),
-            kBlueAlliancePerspectiveRotation,
+            m_pigeon2.getRotation2d(),
             getState().ModulePositions,
             LimelightHelpers.getBotPose2d_wpiBlue("limelight-one")
             );
@@ -271,9 +272,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveDriveOdometry m_swerveDriveOdometry = 
         new SwerveDriveOdometry(
             getKinematics(), 
-            kBlueAlliancePerspectiveRotation, 
+            m_pigeon2.getRotation2d(), 
             getState().ModulePositions
             );
+
+    //Pigeon Reset
+    public void resetPigeon(){
+        m_pigeon2.setYaw(90);
+    }
 
     @Override
     public void periodic() {
@@ -299,12 +305,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
         //Pose Estimator
         if (!doBooleanDog) {
-            m_poseEstimator.update(kBlueAlliancePerspectiveRotation, getState().ModulePositions);
+            m_poseEstimator.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
 
             LimelightHelpers.SetRobotOrientation("limelight-one", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
             if (Math.abs(m_pigeon2.getAngularVelocityZWorld().getValueAsDouble()) > 720){
                 doRejectUpdate = true;
-            } 
+            }
             if (mt2.tagCount == 0){
                 doRejectUpdate = true;
             }
@@ -314,16 +320,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             }
             //Uploading Field and Pose
             m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
-            // double oneRotation = LimelightHelpers.getBotPose2d("limelight-one").getRotation().getDegrees(); 
-            // double twoRotation = LimelightHelpers.getBotPose2d("limelight-two").getRotation().getDegrees();
-            // Rotation2d avrRotation = new Rotation2d((oneRotation - twoRotation) / 2);
-            // SmartDashboard.putNumber("one", oneRotation);
-            // SmartDashboard.putNumber("two", twoRotation);
-            m_field.setRobotPose(m_poseEstimator.getEstimatedPosition().getMeasureX(), m_poseEstimator.getEstimatedPosition().getMeasureY(), LimelightHelpers.getBotPose2d("limelight-one").getRotation());
         }
         else {
-            m_swerveDriveOdometry.update(kBlueAlliancePerspectiveRotation, getState().ModulePositions);
-            m_field.setRobotPose(m_swerveDriveOdometry.getPoseMeters());
+            m_swerveDriveOdometry.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
             m_field.setRobotPose(m_swerveDriveOdometry.getPoseMeters().getMeasureX(), m_swerveDriveOdometry.getPoseMeters().getMeasureY(), m_pigeon2.getRotation2d());
         }   
         

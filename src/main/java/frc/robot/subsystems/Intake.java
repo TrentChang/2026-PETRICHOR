@@ -8,11 +8,11 @@ public class Intake extends SubsystemBase {
     private final TalonFX intakeMotor = new TalonFX(32);
 
     public void intakeRotate(){
-        intakeMotor.set(0.3);
+        intakeMotor.set(0.8);
     }
 
     public void intakeReverseRotate(){
-        intakeMotor.set(-0.3);
+        intakeMotor.set(-0.8);
     }
 
     public void intakeStop(){
