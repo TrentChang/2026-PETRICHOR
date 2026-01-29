@@ -55,6 +55,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private boolean badTagData;
     private final Field2d m_field = new Field2d();
     private final Pigeon2 m_pigeon2 = new Pigeon2(31);
+    LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
+
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
@@ -289,12 +291,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         badTagData = false;
         LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
 
-        if (LimelightHelpers.getFiducialID("limelgiht-one") != -1) {
+        if (LimelightHelpers.getFiducialID("limelight-one") != -1) {
             mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
             LimelightHelpers.SetRobotOrientation("limelight-one", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
 
         }
-        else if (LimelightHelpers.getFiducialID("limelgiht-two") != -1) {
+        else if (LimelightHelpers.getFiducialID("limelight-two") != -1) {
             mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two");
             LimelightHelpers.SetRobotOrientation("limelight-two", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
         }
@@ -319,8 +321,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
         else {
             m_swerveDriveOdometry.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
-            m_field.setRobotPose(m_swerveDriveOdometry.getPoseMeters().getMeasureX(), m_swerveDriveOdometry.getPoseMeters().getMeasureY(), m_pigeon2.getRotation2d());
-        }
+            m_field.setRobotPose(m_swerveDriveOdometry.getPoseMeters());
+        }   
         
         SmartDashboard.putData("Field2D", m_field);
 
