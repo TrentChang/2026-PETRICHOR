@@ -53,9 +53,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private double m_lastSimTime;
     private boolean doRejectUpdate;
     private boolean badTagData;
+    private LimelightHelpers.PoseEstimate mt2;
     private final Field2d m_field = new Field2d();
     private final Pigeon2 m_pigeon2 = new Pigeon2(31);
-    LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
 
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
@@ -268,7 +268,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             m_pigeon2.getRotation2d(),
             getState().ModulePositions,
             LimelightHelpers.getBotPose2d_wpiBlue("limelight-one")
-            );
+        );
 
     // //Pose odometry
     // private final SwerveDriveOdometry m_swerveDriveOdometry = 
@@ -286,19 +286,18 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     @Override
     public void periodic() {
         m_poseEstimator.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
+        LimelightHelpers.SetRobotOrientation("limelight-one", m_pigeon2.getYaw().getValueAsDouble(), 0, 0, 0, 0, 0);
 
         doRejectUpdate = false;
         badTagData = false;
-        LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
 
         if (LimelightHelpers.getFiducialID("limelight-one") != -1) {
             mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
-            LimelightHelpers.SetRobotOrientation("limelight-one", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
         }
-        else if (LimelightHelpers.getFiducialID("limelight-two") != -1) {
-            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two");
-            LimelightHelpers.SetRobotOrientation("limelight-two", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
-        }
+        // else if (LimelightHelpers.getFiducialID("limelight-two") != -1) {
+        //     mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two");
+        //     LimelightHelpers.SetRobotOrientation("limelight-two", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
+        // }
         else {
             badTagData = true;
         }
