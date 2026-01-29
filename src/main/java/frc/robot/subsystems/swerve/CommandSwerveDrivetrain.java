@@ -52,7 +52,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
     private boolean doRejectUpdate;
-    private boolean doBooleanDog;
+    private boolean badTagData;
     private final Field2d m_field = new Field2d();
     private final Pigeon2 m_pigeon2 = new Pigeon2(31);
 
@@ -283,8 +283,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     @Override
     public void periodic() {
+        m_poseEstimator.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
+
         doRejectUpdate = false;
-        doBooleanDog = false;
+        badTagData = false;
         LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
 
         if (LimelightHelpers.getFiducialID("limelgiht-one") != -1) {
@@ -297,13 +299,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             LimelightHelpers.SetRobotOrientation("limelight-two", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
         }
         else {
-            doBooleanDog = true;
+            badTagData = true;
         }
 
         //Pose Estimator
-        if (!doBooleanDog) {
-            m_poseEstimator.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
-
+        if (!badTagData) {
             if (Math.abs(m_pigeon2.getAngularVelocityZWorld().getValueAsDouble()) > 720){
                 doRejectUpdate = true;
             }
@@ -320,7 +320,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         else {
             m_swerveDriveOdometry.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
             m_field.setRobotPose(m_swerveDriveOdometry.getPoseMeters().getMeasureX(), m_swerveDriveOdometry.getPoseMeters().getMeasureY(), m_pigeon2.getRotation2d());
-        }   
+        }
         
         SmartDashboard.putData("Field2D", m_field);
 
