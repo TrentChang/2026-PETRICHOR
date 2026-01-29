@@ -239,25 +239,25 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     }
 
     public Rotation2d swerveRotationCombination(){
-        double rotation1 = LimelightHelpers.getBotPose2d("limelgiht-one").getRotation().getDegrees();
-        double rotation2 = LimelightHelpers.getBotPose2d("limelgiht-two").getRotation().getDegrees();
+        double rotation1 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelgiht-one").pose.getRotation().getDegrees();
+        double rotation2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelgiht-two").pose.getRotation().getDegrees();
         double storedPoseDeg = (rotation1 + rotation2) / 2;
         return new Rotation2d(storedPoseDeg);
     }
 
-    public Pose2d swervePoseCombination(){
-        double x1 = LimelightHelpers.getBotPose2d_wpiBlue("limelight-one").getX();
-        double y1 = LimelightHelpers.getBotPose2d_wpiBlue("limelight-one").getY();
-        double x2 = LimelightHelpers.getBotPose2d_wpiBlue("limelight-two").getX();
-        double y2 = LimelightHelpers.getBotPose2d_wpiBlue("limelight-two").getY();
+    // public Pose2d swervePoseCombination(){
+    //     double x1 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose.getX();
+    //     double y1 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose.getY();
+    //     double x2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two").pose.getX();
+    //     double y2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two").pose.getY();
 
-        double storedPoseX = (x1 + x2) / 2;
-        double storedPoseY = (y1 + y2) / 2;
+    //     double storedPoseX = (x1 + x2) / 2;
+    //     double storedPoseY = (y1 + y2) / 2;
         
-        Translation2d m_translation = new Translation2d(storedPoseX, storedPoseY);
-        Rotation2d m_rotation = swerveRotationCombination();
-        return new Pose2d(m_translation, m_rotation);
-    }
+    //     Translation2d m_translation = new Translation2d(storedPoseX, storedPoseY);
+    //     Rotation2d m_rotation = swerveRotationCombination();
+    //     return new Pose2d(m_translation, m_rotation);
+    // }
 
     //Pose estimator
     private final SwerveDrivePoseEstimator m_poseEstimator = 
@@ -287,17 +287,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         doBooleanDog = false;
         LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
 
-        if (LimelightHelpers.getFiducialID("limelgiht-one") != -1 && LimelightHelpers.getFiducialID("limelgiht-two")  != -1) {
-            LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose = swervePoseCombination();
+        if (LimelightHelpers.getFiducialID("limelgiht-one") != -1) {
             mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
-        }
-        else if (LimelightHelpers.getFiducialID("limelgiht-one") != -1) {
-            LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose = LimelightHelpers.getBotPose2d_wpiBlue("limelight-one");
-            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
+            LimelightHelpers.SetRobotOrientation("limelight-one", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
+
         }
         else if (LimelightHelpers.getFiducialID("limelgiht-two") != -1) {
-            LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose = LimelightHelpers.getBotPose2d_wpiBlue("limelight-two");
-            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
+            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two");
+            LimelightHelpers.SetRobotOrientation("limelight-two", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
         }
         else {
             doBooleanDog = true;
@@ -307,7 +304,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (!doBooleanDog) {
             m_poseEstimator.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
 
-            LimelightHelpers.SetRobotOrientation("limelight-one", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
             if (Math.abs(m_pigeon2.getAngularVelocityZWorld().getValueAsDouble()) > 720){
                 doRejectUpdate = true;
             }
