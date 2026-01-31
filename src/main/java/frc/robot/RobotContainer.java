@@ -6,17 +6,25 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.security.cert.X509CRL;
+
+import org.ejml.simple.AutomaticSimpleMatrixConvert;
+
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.PS5Controller.Button;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.subsystems.Intake;
-
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.swerve.CommandSwerveDrivetrain;
 
@@ -34,20 +42,31 @@ public class RobotContainer {
 
     //controller
     private final CommandXboxController driverCtrl = new CommandXboxController(0);
+    private final XboxController opController = new XboxController(0);
 
     //drivetrain
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
     //Subsystem
     public final Intake intake = new Intake();
+    // public final autoAlignmentDrive m_aAutoAlignmentDrive = new autoAlignmentDrive.alignDrive(driverCtrl, () -> driveConstants.getHubPose().toPose2d());
 
+    //Command
     public RobotContainer() {
         configureBindings();
     }
 
     private void configureBindings() {
-        driverCtrl.a().whileTrue(new InstantCommand(intake::intakeRotate)).onFalse(new InstantCommand(intake::intakeStop, intake));
-        driverCtrl.b().whileTrue(new InstantCommand(intake::intakeReverseRotate)).onFalse(new InstantCommand(intake::intakeStop, intake));
+        // driverCtrl.a().whileTrue(new InstantCommand(intake::intakeRotate)).onFalse(new InstantCommand(intake::intakeStop, intake));
+        // driverCtrl.b().whileTrue(new InstantCommand(intake::intakeReverseRotate)).onFalse(new InstantCommand(intake::intakeStop, intake));
+        driverCtrl.a().whileTrue(drivetrain.autoRange());
+
+        new JoystickButton(opController, 5).whileTrue(new InstantCommand(intake::intakeRotate, intake)).onFalse(new InstantCommand(intake::intakeStop, intake));
+        new JoystickButton(opController, 6).whileTrue(new InstantCommand(intake::intakeReverseRotate, intake)).onFalse(new InstantCommand(intake::intakeStop, intake));
+
+        new JoystickButton(opController, Button.kR1.value).whileTrue(new Command() {
+            
+        });
 
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
@@ -60,8 +79,8 @@ public class RobotContainer {
             )
         );
 
-        // Idle while the robot is disabled. This ensures the configured
-        // neutral mode is applied to the drive motors while disabled.
+        // // Idle while the robot is disabled. This ensures the configured
+        // // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
         RobotModeTriggers.disabled().whileTrue(
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
@@ -76,7 +95,7 @@ public class RobotContainer {
         driverCtrl.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
         drivetrain.registerTelemetry(logger::telemeterize);
-    }
+    }  
 
     public Command getAutonomousCommand() {
         // Simple drive forward auton

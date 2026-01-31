@@ -6,14 +6,20 @@ package frc.robot;
 
 import com.ctre.phoenix6.HootAutoReplay;
 
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.swerve.CommandSwerveDrivetrain;
+import edu.wpi.first.wpilibj.XboxController;
 
 public class Robot extends TimedRobot {
     private Command m_autonomousCommand;
+    public final RobotContainer m_robotContainer;
 
-    private final RobotContainer m_robotContainer;
+    private final XboxController m_controller = new XboxController(0);
+    private final CommandSwerveDrivetrain drivetrain =  TunerConstants.createDrivetrain();
 
     /* log and replay timestamp and joystick data */
     private final HootAutoReplay m_timeAndJoystickReplay = new HootAutoReplay()
@@ -47,14 +53,14 @@ public class Robot extends TimedRobot {
         LimelightHelpers.SetIMUMode("limelight-two", 3);
     }
 
-    @Override
-    public void autonomousInit() {
-        m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    // @Override
+    // public void autonomousInit() {
+    //     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
-        if (m_autonomousCommand != null) {
-            CommandScheduler.getInstance().schedule(m_autonomousCommand);
-        }
-    }
+    //     if (m_autonomousCommand != null) {
+    //         CommandScheduler.getInstance().schedule(m_autonomousCommand);
+    //     }
+    // }
 
     @Override
     public void autonomousPeriodic() {}
