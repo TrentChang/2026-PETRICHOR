@@ -59,8 +59,6 @@ public class RobotContainer {
     private void configureBindings() {
         // driverCtrl.a().whileTrue(new InstantCommand(intake::intakeRotate)).onFalse(new InstantCommand(intake::intakeStop, intake));
         // driverCtrl.b().whileTrue(new InstantCommand(intake::intakeReverseRotate)).onFalse(new InstantCommand(intake::intakeStop, intake));
-        driverCtrl.a().whileTrue(drivetrain.autoRange());
-
         new JoystickButton(opController, 5).whileTrue(new InstantCommand(intake::intakeRotate, intake)).onFalse(new InstantCommand(intake::intakeStop, intake));
         new JoystickButton(opController, 6).whileTrue(new InstantCommand(intake::intakeReverseRotate, intake)).onFalse(new InstantCommand(intake::intakeStop, intake));
 

@@ -292,7 +292,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     //Pigeon Reset
     public void resetPigeon(){
-        m_pigeon2.setYaw(180);
+        m_pigeon2.setYaw(360);
     }
 
     //Auto Range
@@ -336,7 +336,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
         else {
             m_swerveDriveOdometry.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
-            m_field.setRobotPose(m_swerveDriveOdometry.getPoseMeters().getMeasureX(), m_swerveDriveOdometry.getPoseMeters().getMeasureY(), m_pigeon2.getRotation2d());
+            m_field.setRobotPose(m_poseEstimator.getEstimatedPosition().getMeasureX(), m_poseEstimator.getEstimatedPosition().getMeasureY(), m_pigeon2.getRotation2d());
         }   
         
         SmartDashboard.putData("Field2D", m_field);
