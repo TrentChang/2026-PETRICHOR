@@ -273,7 +273,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     //     return new Pose2d(m_translation, m_rotation);
     // }
 
-    //Pose estimator
+    // Pose estimator
     public final SwerveDrivePoseEstimator m_poseEstimator = 
         new SwerveDrivePoseEstimator(
             getKinematics(),
@@ -303,6 +303,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     public void periodic() {
         m_poseEstimator.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
 
+        // SmartDashboard.putString("IMU mode", m_pigeon2.getYaw().toString());
+
         doRejectUpdate = false;
         badTagData = false;
         LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two");
@@ -317,7 +319,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
         else {
             badTagData = true;
-        }
+        } 
 
         //Pose Estimator
         if (!badTagData) {
