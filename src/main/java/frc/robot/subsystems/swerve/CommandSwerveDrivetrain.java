@@ -2,47 +2,35 @@ package frc.robot.subsystems.swerve;
 
 import static edu.wpi.first.units.Units.*;
 
-import java.time.Period;
 import java.util.Optional;
-import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.hardware.Pigeon2;
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
-import com.ctre.phoenix6.swerve.SwerveModule;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
-import com.ctre.phoenix6.swerve.jni.SwerveJNI.ModulePosition;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.estimator.PoseEstimator;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.LimelightHelpers;
-import frc.robot.Robot;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-// import frc.robot.Constants.fieldConstants;
-import frc.robot.generated.TunerConstants;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 import frc.robot.Constants.swerveDriveConstants;
 
@@ -59,10 +47,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private double m_lastSimTime;
     private boolean doRejectUpdate;
     private boolean badTagData;
+    private double m_maxSpeed = swerveDriveConstants.maxSpeed;
+
     private final Field2d m_field = new Field2d();
     private final Pigeon2 m_pigeon2 = new Pigeon2(31);
-    private final PIDController controllerRange = new PIDController(1, 0, 0);
     LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
+   
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
@@ -75,6 +65,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
     private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
+
+    // private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
+    //         .withDeadband(m_maxSpeed * 0.1) // Add a 10% deadband
+    //         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);// Use open-loop control for drive motors
 
     /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
     private final SysIdRoutine m_sysIdRoutineTranslation = new SysIdRoutine(
@@ -293,11 +287,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     //Pigeon Reset
     public void resetPigeon(){
         m_pigeon2.setYaw(360);
-    }
+    };
 
-    //Auto Range
-    //driveCommandu in github https://github.com/EmilianoCasV/Swerve_vision./blob/main/src/main/java/frc/robot/subsystems/swervedrive/SwerveSubsystem.java
-     
+    //Auto align
+    public final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
+        .withDeadband(m_maxSpeed * 0.1) // Add a 10% deadband
+        .withDriveRequestType(DriveRequestType.OpenLoopVoltage); //Use open-loop control for drive motors
 
     @Override
     public void periodic() {

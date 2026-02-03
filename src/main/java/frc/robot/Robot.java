@@ -5,22 +5,19 @@
 package frc.robot;
 
 import com.ctre.phoenix6.HootAutoReplay;
-import com.ctre.phoenix6.hardware.Pigeon2;
 
-import edu.wpi.first.math.util.Units;
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.swerve.CommandSwerveDrivetrain;
-import edu.wpi.first.wpilibj.XboxController;
+import frc.robot.Constants.driveConstants;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Robot extends TimedRobot {
     private Command m_autonomousCommand;
     public final RobotContainer m_robotContainer;
-
-    private final XboxController m_controller = new XboxController(0);
-    private final CommandSwerveDrivetrain drivetrain =  TunerConstants.createDrivetrain();
 
     /* log and replay timestamp and joystick data */
     private final HootAutoReplay m_timeAndJoystickReplay = new HootAutoReplay()
@@ -35,6 +32,15 @@ public class Robot extends TimedRobot {
     public void robotPeriodic() {
         m_timeAndJoystickReplay.update();
         CommandScheduler.getInstance().run(); 
+        Pose2d drivePose = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose;
+        Pose2d targetPose = Constants.driveConstants.blueHubPose.toPose2d();
+        Rotation2d desiredAngle = drivePose.relativeTo(targetPose).getTranslation().getAngle();
+        Rotation2d currentAngle = drivePose.getRotation();
+        Rotation2d deltaAngle = currentAngle.minus(desiredAngle);
+        double wrappedAngleDeg = MathUtil.inputModulus(deltaAngle.getDegrees(), -180, 180); 
+        SmartDashboard.putNumber("wrapp", wrappedAngleDeg);
+        double rotationalRate = driveConstants.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
+        SmartDashboard.putNumber("rr", rotationalRate);
     }
 
     @Override
@@ -43,15 +49,15 @@ public class Robot extends TimedRobot {
     @Override
     public void disabledPeriodic() {
         // Use external Gyro to "seed" internal IMU
-        LimelightHelpers.SetIMUMode("limelight-one", 1);
-        LimelightHelpers.SetIMUMode("limelight-two", 1);
+        LimelightHelpers.SetIMUMode("limelight-one", 3);
+        LimelightHelpers.SetIMUMode("limelight-two", 3);
     }
 
     @Override
     public void disabledExit() {
         // Switch to internal IMU + MT1
-        LimelightHelpers.SetIMUMode("limelight-one", 1);
-        LimelightHelpers.SetIMUMode("limelight-two", 1);
+        LimelightHelpers.SetIMUMode("limelight-one", 3);
+        LimelightHelpers.SetIMUMode("limelight-two", 3);
     }
 
     // @Override

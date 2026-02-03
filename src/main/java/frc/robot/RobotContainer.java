@@ -13,6 +13,7 @@ import org.ejml.simple.AutomaticSimpleMatrixConvert;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.XboxController;
@@ -25,8 +26,10 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.subsystems.Intake;
+import frc.robot.Constants.DriveConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.swerve.CommandSwerveDrivetrain;
+import frc.robot.commands.AutoAlign;
 
 public class RobotContainer {
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -36,6 +39,7 @@ public class RobotContainer {
     private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
+
     private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
     private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
     private final Telemetry logger = new Telemetry(MaxSpeed);
@@ -52,12 +56,14 @@ public class RobotContainer {
     // public final autoAlignmentDrive m_aAutoAlignmentDrive = new autoAlignmentDrive.alignDrive(driverCtrl, () -> driveConstants.getHubPose().toPose2d());
 
     //Command
+    public AutoAlign autoAlign = new AutoAlign(driverCtrl, drivetrain);
+
     public RobotContainer() {
         configureBindings();
     }
 
     private void configureBindings() {
-        // driverCtrl.a().whileTrue(new InstantCommand(intake::intakeRotate)).onFalse(new InstantCommand(intake::intakeStop, intake));
+        driverCtrl.leftBumper().whileTrue(autoAlign);
         // driverCtrl.b().whileTrue(new InstantCommand(intake::intakeReverseRotate)).onFalse(new InstantCommand(intake::intakeStop, intake));
         new JoystickButton(opController, 5).whileTrue(new InstantCommand(intake::intakeRotate, intake)).onFalse(new InstantCommand(intake::intakeStop, intake));
         new JoystickButton(opController, 6).whileTrue(new InstantCommand(intake::intakeReverseRotate, intake)).onFalse(new InstantCommand(intake::intakeStop, intake));
@@ -84,7 +90,7 @@ public class RobotContainer {
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
         );
 
-        driverCtrl.a().whileTrue(drivetrain.applyRequest(() -> brake));
+        // driverCtrl.a().whileTrue(drivetrain.applyRequest(() -> brake));
         driverCtrl.b().whileTrue(drivetrain.applyRequest(() ->
             point.withModuleDirection(new Rotation2d(-driverCtrl.getLeftY(), -driverCtrl.getLeftX()))
         ));
