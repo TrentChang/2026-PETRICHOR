@@ -268,16 +268,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     //     Translation2d m_translation = new Translation2d(storedPoseX, storedPoseY);
     //     Rotation2d m_rotation = swerveRotationCombination();
     //     return new Pose2d(m_translation, m_rotation);
-    // }
-
-    // Pose estimator
-    public final SwerveDrivePoseEstimator m_poseEstimator = 
-        new SwerveDrivePoseEstimator(
-            getKinematics(),
-            m_pigeon2.getRotation2d(),
-            getState().ModulePositions,
-            LimelightHelpers.getBotPose2d_wpiBlue("limelight-one")
-            );
+    //
 
     //Pigeon Reset
     public void resetPigeon(){
@@ -294,31 +285,30 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             double controllerVelX = -driverCtrl.getLeftX();
             double controllerVelY = -driverCtrl.getLeftY();
 
-            Pose2d drivePose = m_field.getRobotPose();
+            Pose2d drivePose = getState().Pose;
             Pose2d targetPose = driveConstants.getHubPose().toPose2d();
             // double targetDistance = drivePose.getTranslation().getDistance(targetPose.getTranslation());
             Rotation2d desiredAngle = drivePose.relativeTo(targetPose).getTranslation().getAngle();
             Rotation2d currentAngle = drivePose.getRotation();
             Rotation2d deltaAngle = currentAngle.minus(desiredAngle);
-            double wrappedAngleDeg = MathUtil.inputModulus(deltaAngle.getDegrees(), -180, 180); 
-             if (
-                (Math.abs(wrappedAngleDeg) < driveConstants.epsilonAngleToGoal.in(Degrees)) // if facing goal already
-                || Math.hypot(controllerVelX, controllerVelY) < 0.1) {
-                    return new SwerveRequest.SwerveDriveBrake();
-                } else {
-                    double rotationalRate = driveConstants.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
-                    return alignDrive
-                    .withVelocityX(controllerVelX * driveConstants.maxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-driverCtrl.getLeftX() * driveConstants.maxSpeed) // Drive left with negative X (left)
-                    .withRotationalRate(-rotationalRate * driveConstants.maxAngularRate); // Use angular rate for rotation
+            double wrappedAngleDeg = MathUtil.inputModulus(deltaAngle.getDegrees(), -180, 180);
+
+             if ((Math.abs(wrappedAngleDeg) < driveConstants.epsilonAngleToGoal.in(Degrees)) // if facing goal already
+            || Math.hypot(controllerVelX, controllerVelY) < 0.1) {
+                return new SwerveRequest.SwerveDriveBrake();
+            } 
+            else {
+                double rotationalRate = driveConstants.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
+                return alignDrive
+                .withVelocityX(controllerVelY * driveConstants.maxSpeed) // Drive forward with negative Y (forward)
+                .withVelocityY(controllerVelX * driveConstants.maxSpeed) // Drive left with negative X (left)
+                .withRotationalRate(-rotationalRate * driveConstants.maxAngularRate); // Use angular rate for rotation
             }
             });
     };
 
     @Override
     public void periodic() {
-        m_poseEstimator.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
-
         // SmartDashboard.putString("IMU mode", m_pigeon2.getYaw().toString());
 
         doRejectUpdate = false;
@@ -327,11 +317,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
         if (LimelightHelpers.getFiducialID("limelight-two") != -1) {
             mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two");
-            LimelightHelpers.SetRobotOrientation("limelight-two", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
+            LimelightHelpers.SetRobotOrientation("limelight-two", getState().Pose.getRotation().getDegrees(), 0, 0, 0, 0, 0);
         }
         else if (LimelightHelpers.getFiducialID("limelight-one") != -1) {
             mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
-            LimelightHelpers.SetRobotOrientation("limelight-one", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
+            LimelightHelpers.SetRobotOrientation("limelight-one", getState().Pose.getRotation().getDegrees(), 0, 0, 0, 0, 0);
         }
         else {
             badTagData = true;
@@ -346,12 +336,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 doRejectUpdate = true;
             }
             if (!doRejectUpdate){
-                m_poseEstimator.setVisionMeasurementStdDevs(VecBuilder.fill(.7,.7,9999999));
-                m_poseEstimator.addVisionMeasurement(mt2.pose, mt2.timestampSeconds);
+                addVisionMeasurement(mt2.pose, mt2.timestampSeconds, VecBuilder.fill(0.003, 0.003, 9999999));
             }
-            //Uploading Field and Pose
-            m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
         }
+
+        m_field.setRobotPose(getState().Pose);
 
         SmartDashboard.putData("Field2D", m_field);
 
@@ -401,19 +390,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         super.addVisionMeasurement(visionRobotPoseMeters, Utils.fpgaToCurrentTime(timestampSeconds));
     }
 
-    /**
-     * Adds a vision measurement to the Kalman Filter. This will correct the odometry pose estimate
-     * while still accounting for measurement noise.
-     * <p>
-     * Note that the vision measurement standard deviations passed into this method
-     * will continue to apply to future measurements until a subsequent call to
-     * {@link #setVisionMeasurementStdDevs(Matrix)} or this method.
-     *
-     * @param visionRobotPoseMeters The pose of the robot as measured by the vision camera.
-     * @param timestampSeconds The timestamp of the vision measurement in seconds.
-     * @param visionMeasurementStdDevs Standard deviations of the vision pose measurement
-     *     in the form [x, y, theta]ᵀ, with units in meters and radians.
-     */
     @Override
     public void addVisionMeasurement(
         Pose2d visionRobotPoseMeters,

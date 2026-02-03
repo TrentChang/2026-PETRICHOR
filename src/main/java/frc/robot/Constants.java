@@ -28,7 +28,7 @@ public class Constants {
         public static final PIDController rotationController = getRotationController();
 
         private static final PIDController getRotationController() {
-            PIDController controller = new PIDController(0.035, 0.0, 0.0);
+            PIDController controller = new PIDController(0.030, 0.0, 0.00035);
             controller.enableContinuousInput(-Math.PI, Math.PI);
             return controller;
         }
@@ -39,7 +39,7 @@ public class Constants {
             return hubPose;
         }
     }
-    
+
     public static class swerveDriveConstants {
         public static final double maxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
         public static final double maxAngularRate = Units.RotationsPerSecond.of(0.75).in(Units.RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
