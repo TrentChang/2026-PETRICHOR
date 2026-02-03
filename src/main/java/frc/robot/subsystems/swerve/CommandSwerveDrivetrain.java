@@ -279,14 +279,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             LimelightHelpers.getBotPose2d_wpiBlue("limelight-one")
             );
 
-    //Pose odometry
-    private final SwerveDriveOdometry m_swerveDriveOdometry = 
-        new SwerveDriveOdometry(
-            getKinematics(), 
-            m_pigeon2.getRotation2d(), 
-            getState().ModulePositions
-            );
-
     //Pigeon Reset
     public void resetPigeon(){
         m_pigeon2.setYaw(360);
@@ -360,11 +352,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             //Uploading Field and Pose
             m_field.setRobotPose(m_poseEstimator.getEstimatedPosition());
         }
-        else {
-            m_swerveDriveOdometry.update(m_pigeon2.getRotation2d(), getState().ModulePositions);
-            m_field.setRobotPose(m_poseEstimator.getEstimatedPosition().getMeasureX(), m_poseEstimator.getEstimatedPosition().getMeasureY(), m_pigeon2.getRotation2d());
-        }   
-        
+
         SmartDashboard.putData("Field2D", m_field);
 
         /*%
