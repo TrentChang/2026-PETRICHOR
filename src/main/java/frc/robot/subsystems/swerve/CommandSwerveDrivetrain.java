@@ -13,6 +13,7 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -27,11 +28,13 @@ import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.LimelightHelpers;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
+import frc.robot.Constants.driveConstants;
 import frc.robot.Constants.swerveDriveConstants;
 
 /**
@@ -290,9 +293,35 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     };
 
     //Auto align
-    public final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
-        .withDeadband(m_maxSpeed * 0.1) // Add a 10% deadband
-        .withDriveRequestType(DriveRequestType.OpenLoopVoltage); //Use open-loop control for drive motors
+    private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
+            .withDeadband(driveConstants.maxSpeed * 0.1).withRotationalDeadband(driveConstants.maxAngularRate * 0.1) // Add a 10% deadband
+            .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
+
+    public Command autoAlignCommand(CommandXboxController driverCtrl) {
+        return applyRequest(() -> {
+            double controllerVelX = -driverCtrl.getLeftX();
+            double controllerVelY = -driverCtrl.getLeftY();
+
+            Pose2d drivePose = m_field.getRobotPose();
+            Pose2d targetPose = driveConstants.getHubPose().toPose2d();
+            // double targetDistance = drivePose.getTranslation().getDistance(targetPose.getTranslation());
+            Rotation2d desiredAngle = drivePose.relativeTo(targetPose).getTranslation().getAngle();
+            Rotation2d currentAngle = drivePose.getRotation();
+            Rotation2d deltaAngle = currentAngle.minus(desiredAngle);
+            double wrappedAngleDeg = MathUtil.inputModulus(deltaAngle.getDegrees(), -180, 180); 
+             if (
+                (Math.abs(wrappedAngleDeg) < driveConstants.epsilonAngleToGoal.in(Degrees)) // if facing goal already
+                || Math.hypot(controllerVelX, controllerVelY) < 0.1) {
+                    return new SwerveRequest.SwerveDriveBrake();
+                } else {
+                    double rotationalRate = driveConstants.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
+                    return alignDrive
+                    .withVelocityX(controllerVelX * driveConstants.maxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(-driverCtrl.getLeftX() * driveConstants.maxSpeed) // Drive left with negative X (left)
+                    .withRotationalRate(-rotationalRate * driveConstants.maxAngularRate); // Use angular rate for rotation
+            }
+            });
+    };
 
     @Override
     public void periodic() {

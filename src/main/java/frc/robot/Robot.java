@@ -18,6 +18,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Robot extends TimedRobot {
     private Command m_autonomousCommand;
     public final RobotContainer m_robotContainer;
+    public String targetLimelight = "";
+    public boolean doGetTarget = false;
 
     /* log and replay timestamp and joystick data */
     private final HootAutoReplay m_timeAndJoystickReplay = new HootAutoReplay()
@@ -26,6 +28,20 @@ public class Robot extends TimedRobot {
 
     public Robot() {
         m_robotContainer = new RobotContainer();
+    }
+
+    private void getHasTarget(){
+        if (LimelightHelpers.getFiducialID("limelight-two") != -1) {
+            targetLimelight = "limelight-two";
+            doGetTarget = true;
+        }
+        else if (LimelightHelpers.getFiducialID("limelight-one") != -1) {
+            targetLimelight = "limelight-one";
+            doGetTarget = true;
+        }
+        else {
+            doGetTarget = false;
+        }
     }
 
     @Override
@@ -41,6 +57,8 @@ public class Robot extends TimedRobot {
         SmartDashboard.putNumber("wrapp", wrappedAngleDeg);
         double rotationalRate = driveConstants.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
         SmartDashboard.putNumber("rr", rotationalRate);
+
+        getHasTarget();
     }
 
     @Override
