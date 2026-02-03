@@ -22,6 +22,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
@@ -287,24 +288,39 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
             Pose2d drivePose = getState().Pose;
             Pose2d targetPose = driveConstants.getHubPose().toPose2d();
-            // double targetDistance = drivePose.getTranslation().getDistance(targetPose.getTranslation());
-            Rotation2d desiredAngle = drivePose.relativeTo(targetPose).getTranslation().getAngle();
+            
+            Translation2d deltaDis = targetPose.relativeTo(drivePose).getTranslation();
+            
+            Rotation2d desiredAngle = deltaDis.getAngle();
             Rotation2d currentAngle = drivePose.getRotation();
             Rotation2d deltaAngle = currentAngle.minus(desiredAngle);
+            
             double wrappedAngleDeg = MathUtil.inputModulus(deltaAngle.getDegrees(), -180, 180);
 
-             if ((Math.abs(wrappedAngleDeg) < driveConstants.epsilonAngleToGoal.in(Degrees)) // if facing goal already
-            || Math.hypot(controllerVelX, controllerVelY) < 0.1) {
+            if ((Math.abs(wrappedAngleDeg) < driveConstants.epsilonAngleToGoal.in(Degrees)) // if facing goal already
+               && Math.hypot(controllerVelX, controllerVelY) < 0.1) {
                 return new SwerveRequest.SwerveDriveBrake();
-            } 
-            else {
-                double rotationalRate = driveConstants.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
+            } else {
+                double vx = controllerVelY * driveConstants.maxSpeed;
+                double vy = controllerVelX * driveConstants.maxSpeed;
+                
+                // feedforward
+                double dx = deltaDis.getX(), dy = deltaDis.getY();
+                double vw = Units.radiansToDegrees( (dx*vy - dy*vx) / (dx*dx + dy*dy) ); // 先把PID設成0試試，可能需要在分子加負號
+                    
+                // feedback
+                double feedback = driveConstants.rotationController.calculate(currentAngle.getDegrees(), desiredAngle.getDegrees());
+
+                vw += feedback;
+                vw = Math.clamp(vw, -driveConstants.maxAngularRate, driveConstants.maxAngularRate);
+                vw = Units.degreesToRadians(vw);
+                
                 return alignDrive
-                .withVelocityX(controllerVelY * driveConstants.maxSpeed) // Drive forward with negative Y (forward)
-                .withVelocityY(controllerVelX * driveConstants.maxSpeed) // Drive left with negative X (left)
-                .withRotationalRate(-rotationalRate * driveConstants.maxAngularRate); // Use angular rate for rotation
+                        .withVelocityX(vx) // Drive forward with negative Y (forward)
+                        .withVelocityY(vy) // Drive left with negative X (left)
+                        .withRotationalRate(vw); // Use angular rate for rotation (rad/s)
             }
-            });
+        });
     };
 
     @Override
