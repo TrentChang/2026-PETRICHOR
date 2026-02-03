@@ -245,7 +245,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
-    //robot alignment to hub using absolute field x, y data and slope calc
+    // robot alignment to hub using absolute field x, y data and slope calc
     // public void botToHubSlopeCalc() {
     //     double xHub = fieldConstants.hubCentricXInMeters;
     //     double yHub = fieldConstants.hubCentricXInMeters;
@@ -272,12 +272,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     //     return new Pose2d(m_translation, m_rotation);
     //
 
-    //Pigeon Reset
+    // Pigeon Reset
     public void resetPigeon(){
         m_pigeon2.setYaw(360);
     };
 
-    //Auto align
+    // Auto align
     private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
             .withDeadband(driveConstants.maxSpeed * 0.1).withRotationalDeadband(driveConstants.maxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors

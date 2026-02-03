@@ -67,15 +67,15 @@ public class Robot extends TimedRobot {
     @Override
     public void disabledPeriodic() {
         // Use external Gyro to "seed" internal IMU
-        // LimelightHelpers.SetIMUMode("limelight-one", 3);
-        // LimelightHelpers.SetIMUMode("limelight-two", 3);
+        LimelightHelpers.SetIMUMode("limelight-one", 1);
+        LimelightHelpers.SetIMUMode("limelight-two", 1);
     }
 
     @Override
     public void disabledExit() {
         // Switch to internal IMU + MT1
-        // LimelightHelpers.SetIMUMode("limelight-one", 3);
-        // LimelightHelpers.SetIMUMode("limelight-two", 3);
+        LimelightHelpers.SetIMUMode("limelight-one", 1);
+        LimelightHelpers.SetIMUMode("limelight-two", 1);
     }
 
     // @Override
