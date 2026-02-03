@@ -19,6 +19,7 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
@@ -309,7 +310,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 double vw = (dx*vy - dy*vx) / (dx*dx + dy*dy); // 先把PID設成0試試，可能需要在分子加負號
                     
                 // feedback
-                double feedback = driveConstants.rotationController.calculate(currentAngle.getRandians(), desiredAngle.getRandians());
+                double feedback = driveConstants.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
 
                 vw += feedback;
                 vw = MathUtil.clamp(vw, -driveConstants.maxAngularRate, driveConstants.maxAngularRate);
