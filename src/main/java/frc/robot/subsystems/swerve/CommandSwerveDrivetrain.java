@@ -320,7 +320,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                         .withVelocityY(vy) // Drive left with negative X (left)
                         .withRotationalRate(vw); // Use angular rate for rotation (rad/s)
             }
-        });
+        }).finallyDo(driveConstants.rotationController::reset);  // Reset the rotation controller to clear prev error
     };
 
     @Override
