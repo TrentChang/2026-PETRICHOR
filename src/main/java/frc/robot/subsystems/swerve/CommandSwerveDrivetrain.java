@@ -306,14 +306,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 
                 // feedforward
                 double dx = deltaDis.getX(), dy = deltaDis.getY();
-                double vw = Units.radiansToDegrees( (dx*vy - dy*vx) / (dx*dx + dy*dy) ); // 先把PID設成0試試，可能需要在分子加負號
+                double vw = (dx*vy - dy*vx) / (dx*dx + dy*dy); // 先把PID設成0試試，可能需要在分子加負號
                     
                 // feedback
-                double feedback = driveConstants.rotationController.calculate(currentAngle.getDegrees(), desiredAngle.getDegrees());
+                double feedback = driveConstants.rotationController.calculate(currentAngle.getRandians(), desiredAngle.getRandians());
 
                 vw += feedback;
-                vw = Math.clamp(vw, -driveConstants.maxAngularRate, driveConstants.maxAngularRate);
-                vw = Units.degreesToRadians(vw);
+                vw = MathUtil.clamp(vw, -driveConstants.maxAngularRate, driveConstants.maxAngularRate);
                 
                 return alignDrive
                         .withVelocityX(vx) // Drive forward with negative Y (forward)
