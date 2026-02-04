@@ -21,6 +21,8 @@ public class Constants {
         public static final double maxAngularRate = Units.RotationsPerSecond.of(0.75).in(Units.RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
         
         //wpiblue view
+        // public static final Pose3d redHubPose = new Pose3d(Units.Meters.of(11.91), Units.Meters.of(4.03), Units.Meters.of(1.83), new Rotation3d());
+        // public static final Pose3d blueHubPose = new Pose3d(Units.Meters.of(3.88), Units.Meters.of(4.03),  Units.Meter.of(1.83), new Rotation3d());
         public static final Pose3d redHubPose = new Pose3d(Units.Inches.of(468.56), Units.Inches.of(158.32), Units.Inches.of(72.0), new Rotation3d());
         public static final Pose3d blueHubPose = new Pose3d(Units.Inches.of(152.56), Units.Inches.of(158.32),  Units.Inches.of(72.0), new Rotation3d());
 
@@ -29,7 +31,7 @@ public class Constants {
         public static final PIDController rotationController = getRotationController();
 
         private static final PIDController getRotationController() {
-            PIDController controller = new PIDController(0.030, 0.0, 0.00035);
+            PIDController controller = new PIDController(0.143, 0.0, 0.00514);
             controller.enableContinuousInput(-Math.PI, Math.PI);
             return controller;
         }

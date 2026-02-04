@@ -73,7 +73,7 @@ public class Robot extends TimedRobot {
 
     @Override
     public void disabledExit() {
-        // Switch to internal IMU + MT1
+        // Switch to internal IMU + external IMU
         LimelightHelpers.SetIMUMode("limelight-one", 1);
         LimelightHelpers.SetIMUMode("limelight-two", 1);
     }

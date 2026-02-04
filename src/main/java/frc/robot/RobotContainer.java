@@ -51,7 +51,6 @@ public class RobotContainer {
     //Command
     // public AutoAlign autoAlign = new AutoAlign(driverCtrl, drivetrain);
 
-
     public RobotContainer() {
         configureBindings();
     }

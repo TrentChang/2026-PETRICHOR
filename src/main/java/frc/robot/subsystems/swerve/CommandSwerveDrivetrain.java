@@ -9,6 +9,12 @@ import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+// import com.pathplanner.lib.auto.AutoBuilder;
+// import com.pathplanner.lib.commands.PathPlannerAuto;
+// import com.pathplanner.lib.config.PIDConstants;
+// import com.pathplanner.lib.config.RobotConfig;
+// import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+// import com.pathplanner.lib.util.GeometryUtil;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
@@ -38,6 +44,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 import frc.robot.Constants.driveConstants;
 import frc.robot.Constants.swerveDriveConstants;
+import frc.robot.LimelightHelpers.LimelightTarget_Fiducial;
+import com.sun.java.accessibility.util.GUIInitializedListener;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -57,6 +65,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final Field2d m_field = new Field2d();
     private final Pigeon2 m_pigeon2 = new Pigeon2(31);
     LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
+    private String llNameUsing = "limelight-two";
+    private double fieldReverse;
    
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
@@ -251,7 +261,41 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     //     double yHub = fieldConstants.hubCentricXInMeters;
     // }
 
-    public Rotation2d swerveRotationCombination(){
+    private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
+
+    // public void configurePathPlanner() {
+    //     try {
+    //         AutoBuilder.configure(
+    //         () -> this.getState().Pose, // Supplier of current robot pose
+    //         this::resetPose,  // Consumer for seeding pose against auto
+    //         () -> this.getState().Speeds,
+    //         (speeds)->this.setControl(autoRequest.withSpeeds(speeds)), // Consumer of ChassisSpeeds to drive the robot
+    //         new PPHolonomicDriveController(new PIDConstants(5.8, 0, 0.05, 0),
+    //                                        new PIDConstants(4, 0.05, 0, 10)),
+    //         RobotConfig.fromGUISettings(),
+    //         // Boolean supplier that controls when the path will be mirrored for the red alliance
+    //         // This will flip the path being followed to the red side of the field during auto only.
+    //         // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
+    //         () -> {
+    //             var alliance = DriverStation.getAlliance();
+    //             if (alliance.isPresent()) {
+    //                 return alliance.get() == DriverStation.Alliance.Red & !DriverStation.isTeleop();
+    //             }
+    //             return false;
+
+
+    //         },
+    //         this); // Subsystem for requirements
+    //     } catch (Exception e) {
+    //         e.printStackTrace();
+    //     }
+    // }
+
+    // public Command getAutoPath(String pathName) {
+    //     return new PathPlannerAuto(pathName);
+    // }
+
+    public Rotation2d swerveRotationCombination() {
         double rotation1 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelgiht-one").pose.getRotation().getDegrees();
         double rotation2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelgiht-two").pose.getRotation().getDegrees();
         double storedPoseDeg = (rotation1 + rotation2) / 2;
@@ -279,7 +323,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     // Auto align
     private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
-            .withDeadband(driveConstants.maxSpeed * 0.1).withRotationalDeadband(driveConstants.maxAngularRate * 0.1) // Add a 10% deadband
+            .withDeadband(driveConstants.maxSpeed * 0.1).withRotationalDeadband(driveConstants.maxAngularRate * 0.01) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
 
     public Command autoAlignCommand(CommandXboxController driverCtrl) {
@@ -297,7 +341,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             Rotation2d deltaAngle = currentAngle.minus(desiredAngle);
             
             double wrappedAngleDeg = MathUtil.inputModulus(deltaAngle.getDegrees(), -180, 180);
-
+            
             if ((Math.abs(wrappedAngleDeg) < driveConstants.epsilonAngleToGoal.in(Degrees)) // if facing goal already
                && Math.hypot(controllerVelX, controllerVelY) < 0.1) {
                 return new SwerveRequest.SwerveDriveBrake();
@@ -307,20 +351,30 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 
                 // feedforward
                 double dx = deltaDis.getX(), dy = deltaDis.getY();
-                double vw = (dx*vy - dy*vx) / (dx*dx + dy*dy); // 先把PID設成0試試，可能需要在分子加負號
+                double rSquare = (dx*dx + dy*dy);
+
+                // if (rSquare < 1e-4) {
+                    // rSquare = 0;
+                // }
+                
+                double vw = fieldReverse*((dy*vx - dx*vy)) / rSquare ; // 先把PID設成0試試，可能需要在分子加負號
                     
                 // feedback
                 double feedback = driveConstants.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
 
                 vw += feedback;
                 vw = MathUtil.clamp(vw, -driveConstants.maxAngularRate, driveConstants.maxAngularRate);
-                
+                // System.out.println(vw);
+                // System.out.println(vx);
+                // System.out.println(vx);
+                // System.out.println(" ");
+
                 return alignDrive
                         .withVelocityX(vx) // Drive forward with negative Y (forward)
                         .withVelocityY(vy) // Drive left with negative X (left)
-                        .withRotationalRate(vw); // Use angular rate for rotation (rad/s)
+                        .withRotationalRate(vw*1.151); // Use angular rate for rotation (rad/s)
             }
-        }).finallyDo(driveConstants.rotationController::reset);  // Reset the rotation controller to clear prev error
+        });
     };
 
     @Override
@@ -332,16 +386,26 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two");
 
         if (LimelightHelpers.getFiducialID("limelight-two") != -1) {
-            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two");
             LimelightHelpers.SetRobotOrientation("limelight-two", getState().Pose.getRotation().getDegrees(), 0, 0, 0, 0, 0);
+            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two");
+            llNameUsing = "limelight-two";
         }
         else if (LimelightHelpers.getFiducialID("limelight-one") != -1) {
-            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
             LimelightHelpers.SetRobotOrientation("limelight-one", getState().Pose.getRotation().getDegrees(), 0, 0, 0, 0, 0);
+            mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
+            llNameUsing = "limelight-one";
+
         }
         else {
             badTagData = true;
         } 
+
+        if (LimelightHelpers.getFiducialID(llNameUsing) == 19 ||  LimelightHelpers.getFiducialID(llNameUsing) == 20) {
+            fieldReverse = -1;
+        }
+        else {
+            fieldReverse = 1;
+        }
 
         //Pose Estimator
         if (!badTagData) {
