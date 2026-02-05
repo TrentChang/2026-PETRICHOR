@@ -22,14 +22,11 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
@@ -44,8 +41,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 import frc.robot.Constants.driveConstants;
 import frc.robot.Constants.swerveDriveConstants;
-import frc.robot.LimelightHelpers.LimelightTarget_Fiducial;
-import com.sun.java.accessibility.util.GUIInitializedListener;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -60,7 +55,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private double m_lastSimTime;
     private boolean doRejectUpdate;
     private boolean badTagData;
-    private double m_maxSpeed = swerveDriveConstants.maxSpeed;
 
     private final Field2d m_field = new Field2d();
     private final Pigeon2 m_pigeon2 = new Pigeon2(31);
