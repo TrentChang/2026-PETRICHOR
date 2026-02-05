@@ -18,6 +18,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Robot extends TimedRobot {
     private Command m_autonomousCommand;
     public final RobotContainer m_robotContainer;
+
     public String targetLimelight = "";
     public boolean doGetTarget = false;
 
@@ -59,6 +60,8 @@ public class Robot extends TimedRobot {
         SmartDashboard.putNumber("rr", rotationalRate);
 
         getHasTarget();
+
+        CommandScheduler.getInstance().run();
     }
 
     @Override
@@ -78,14 +81,14 @@ public class Robot extends TimedRobot {
         LimelightHelpers.SetIMUMode("limelight-two", 1);
     }
 
-    // @Override
-    // public void autonomousInit() {
-    //     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    @Override
+    public void autonomousInit() {
+        // m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
-    //     if (m_autonomousCommand != null) {
-    //         CommandScheduler.getInstance().schedule(m_autonomousCommand);
-    //     }
-    // }
+        if (m_autonomousCommand != null) {
+            CommandScheduler.getInstance().schedule(m_autonomousCommand);
+        }
+    }
 
     @Override
     public void autonomousPeriodic() {}

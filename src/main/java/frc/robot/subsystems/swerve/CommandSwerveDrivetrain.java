@@ -9,15 +9,13 @@ import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
-// import com.pathplanner.lib.auto.AutoBuilder;
-// import com.pathplanner.lib.commands.PathPlannerAuto;
-// import com.pathplanner.lib.config.PIDConstants;
-// import com.pathplanner.lib.config.RobotConfig;
-// import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-// import com.pathplanner.lib.util.GeometryUtil;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
@@ -25,8 +23,10 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
@@ -35,12 +35,16 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.LimelightHelpers;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
+import frc.robot.LimelightHelpers;
+
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
+import frc.robot.Constants.autoPathConstants;
 import frc.robot.Constants.driveConstants;
-import frc.robot.Constants.swerveDriveConstants;
+
+// import choreo.auto.AutoRoutine;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -60,8 +64,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final Pigeon2 m_pigeon2 = new Pigeon2(31);
     LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one");
     private String llNameUsing = "limelight-two";
-    private double fieldReverse;
-   
+    public double fieldReverse;
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
@@ -74,6 +77,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
     private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
+
+    /** Swerve request to apply during robot-centric path following */
+    private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
+
 
     // private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
     //         .withDeadband(m_maxSpeed * 0.1) // Add a 10% deadband
@@ -159,6 +166,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
+
+        configureAutoBuilder();
     }
 
     /**
@@ -182,6 +191,37 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         super(drivetrainConstants, odometryUpdateFrequency, modules);
         if (Utils.isSimulation()) {
             startSimThread();
+        }
+
+        configureAutoBuilder();
+    }
+
+    private void configureAutoBuilder() {
+        try {
+            var config = RobotConfig.fromGUISettings();
+            AutoBuilder.configure(
+                () -> getState().Pose,   // Supplier of current robot pose
+                this::resetPose,         // Consumer for seeding pose against auto
+                () -> getState().Speeds, // Supplier of current robot speeds
+                // Consumer of ChassisSpeeds and feedforwards to drive the robot
+                (speeds, feedforwards) -> setControl(
+                    m_pathApplyRobotSpeeds.withSpeeds(ChassisSpeeds.discretize(speeds, 0.020))
+                        .withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesXNewtons())
+                        .withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesYNewtons())
+                ),
+                new PPHolonomicDriveController(
+                    // PID constants for translation
+                    autoPathConstants.translationConstants,
+                    // PID constants for rotation
+                    autoPathConstants.translationConstants
+                ),
+                config,
+                // Assume the path needs to be flipped for Red vs Blue, this is normally the case
+                () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+                this // Subsystem for requirements
+            );
+        } catch (Exception ex) {
+            DriverStation.reportError("Failed to load PathPlanner config and configure AutoBuilder", ex.getStackTrace());
         }
     }
 
@@ -215,7 +255,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
+
+        configureAutoBuilder();
     }
+
+    
 
     /**
      * Returns a command that applies the specified control request to this swerve drivetrain.
@@ -254,41 +298,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     //     double xHub = fieldConstants.hubCentricXInMeters;
     //     double yHub = fieldConstants.hubCentricXInMeters;
     // }
-
-    private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
-
-    // public void configurePathPlanner() {
-    //     try {
-    //         AutoBuilder.configure(
-    //         () -> this.getState().Pose, // Supplier of current robot pose
-    //         this::resetPose,  // Consumer for seeding pose against auto
-    //         () -> this.getState().Speeds,
-    //         (speeds)->this.setControl(autoRequest.withSpeeds(speeds)), // Consumer of ChassisSpeeds to drive the robot
-    //         new PPHolonomicDriveController(new PIDConstants(5.8, 0, 0.05, 0),
-    //                                        new PIDConstants(4, 0.05, 0, 10)),
-    //         RobotConfig.fromGUISettings(),
-    //         // Boolean supplier that controls when the path will be mirrored for the red alliance
-    //         // This will flip the path being followed to the red side of the field during auto only.
-    //         // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
-    //         () -> {
-    //             var alliance = DriverStation.getAlliance();
-    //             if (alliance.isPresent()) {
-    //                 return alliance.get() == DriverStation.Alliance.Red & !DriverStation.isTeleop();
-    //             }
-    //             return false;
-
-
-    //         },
-    //         this); // Subsystem for requirements
-    //     } catch (Exception e) {
-    //         e.printStackTrace();
-    //     }
-    // }
-
-    // public Command getAutoPath(String pathName) {
-    //     return new PathPlannerAuto(pathName);
-    // }
-
+    
     public Rotation2d swerveRotationCombination() {
         double rotation1 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelgiht-one").pose.getRotation().getDegrees();
         double rotation2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelgiht-two").pose.getRotation().getDegrees();
@@ -316,7 +326,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     };
 
     // Auto align
-    private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
+    public final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
             .withDeadband(driveConstants.maxSpeed * 0.1).withRotationalDeadband(driveConstants.maxAngularRate * 0.01) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
 

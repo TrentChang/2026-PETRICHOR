@@ -5,6 +5,9 @@ import static edu.wpi.first.units.Units.MetersPerSecond;
 
 import java.util.Optional;
 
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -16,6 +19,11 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.generated.TunerConstants;
 
 public class Constants {
+    public static class autoPathConstants {
+        public static final PIDConstants translationConstants = new PIDConstants(5.0, 0.0, 0.0);
+        public static final PIDConstants rotationConstants = new PIDConstants(5.0, 0.0, 0.0);
+    }
+
     public static class driveConstants {
         public static final double maxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
         public static final double maxAngularRate = Units.RotationsPerSecond.of(0.75).in(Units.RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
@@ -31,7 +39,7 @@ public class Constants {
         public static final PIDController rotationController = getRotationController();
 
         private static final PIDController getRotationController() {
-            PIDController controller = new PIDController(0.143, 0.0, 0.00514);
+            PIDController controller = new PIDController(1.5, 0.0, 0.00514); 
             controller.enableContinuousInput(-Math.PI, Math.PI);
             return controller;
         }
