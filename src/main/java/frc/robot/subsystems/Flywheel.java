@@ -26,7 +26,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constant.shooterConstant;
 import frc.robot.Constant.KrakenX60;
 
-public class Shooter extends SubsystemBase{
+public class Flywheel extends SubsystemBase{
     private static final AngularVelocity kVelocityTolerance = RPM.of(2000);
 
     private final TalonFX FRMotor, BRMotor, FLMotor, BLMotor;
@@ -34,7 +34,7 @@ public class Shooter extends SubsystemBase{
     private final VelocityVoltage velocityRequest = new VelocityVoltage(0).withSlot(0);
     private final VoltageOut voltageRequest = new VoltageOut(0);
 
-    public Shooter() {
+    public Flywheel() {
         FRMotor = new TalonFX(shooterConstant.FR, "CANivore");
         BRMotor = new TalonFX(shooterConstant.BR, "CANivore");
         FLMotor = new TalonFX(shooterConstant.FL, "CANivore");
