@@ -1,6 +1,8 @@
 package frc.robot;
 
-import edu.wpi.first.networktables.PubSub;
+import static edu.wpi.first.units.Units.RPM;
+
+import edu.wpi.first.units.measure.AngularVelocity;
 
 public class Constant {
     public static class intakeConstant {
@@ -31,5 +33,22 @@ public class Constant {
         //conveyor motor id
         public static final int indexer = 41;
         public static final int roller = 42;
+    }
+
+    public static class shooterConstant {
+        //shooter motor id
+        public static final int FR = 21;
+        public static final int BR = 22;
+        public static final int FL = 23;
+        public static final int BL = 24;
+    }
+
+    public static class KrakenX60 {
+        public static final AngularVelocity kFreeSpeed = RPM.of(6000);
+    }
+
+    public static class limelightConstant {
+        public static final String FR = "limelight-FR";
+        public static final String FL = "limelight-FL";
     }
 }
