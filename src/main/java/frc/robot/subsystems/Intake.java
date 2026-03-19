@@ -21,7 +21,7 @@ public class Intake extends SubsystemBase{
     private final CANcoder intakeENcoder = new CANcoder(intakeConstant.encoder, "CANivore");
 
     public Intake(){
-        var intakeCtrlConfig = intakeExtend.getConfigurator();  
+        var intakeCtrlConfig = intakeExtend.getConfigurator();
         // intakeMotorConfig.Inverted  = InvertedValue.CounterClockwise_Positive;
 
         // set feedback sensor as integrated sensor

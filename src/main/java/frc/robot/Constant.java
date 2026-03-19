@@ -26,4 +26,10 @@ public class Constant {
         public static final double systoleAngle = 0.0;
         public static final double defaultAngle = 0.0;
     }
+
+    public static class conveyorConstant {
+        //conveyor motor id
+        public static final int indexer = 41;
+        public static final int roller = 42;
+    }
 }

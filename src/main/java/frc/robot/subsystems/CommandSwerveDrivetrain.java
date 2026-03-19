@@ -51,9 +51,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
 
-    /** Swerve request to apply during robot-centric path following */
-    private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
-
     // private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
     //         .withDeadband(m_maxSpeed * 0.1) // Add a 10% deadband
     //         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);// Use open-loop control for drive motors
