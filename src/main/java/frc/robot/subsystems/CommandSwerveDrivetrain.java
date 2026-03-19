@@ -27,9 +27,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.LimelightHelpers;
-import frc.robot.Constant.limelightConstant;
-import frc.robot.LimelightHelpers.LimelightTarget_Barcode;
-import frc.robot.LimelightHelpers.PoseEstimate;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 // import choreo.auto.AutoRoutine;
 
@@ -236,32 +233,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
-    // robot alignment to hub using absolute field x, y data and slope calc
-    // public void botToHubSlopeCalc() {
-    //     double xHub = fieldConstants.hubCentricXInMeters;
-    //     double yHub = fieldConstants.hubCentricXInMeters;
-    // }
-
-    // public Pose2d swervePoseCombination(){
-    //     double x1 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose.getX();
-    //     double y1 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose.getY();
-    //     double x2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two").pose.getX();
-    //     double y2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two").pose.getY();
-
-    //     double storedPoseX = (x1 + x2) / 2;
-    //     double storedPoseY = (y1 + y2) / 2;
-        
-    //     Translation2d m_translation = new Translation2d(storedPoseX, storedPoseY);
-    //     Rotation2d m_rotation = swerveRotationCombination();
-    //     return new Pose2d(m_translation, m_rotation);
-    //
-
-    // Pigeon Reset
-    public void resetPigeon(){
-        this.seedFieldCentric();
-    };
-
-    
     @Override
     public void periodic() {
         // field2D on smartDashBoard
