@@ -23,8 +23,8 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
+// import choreo.auto.AutoRoutine;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -43,12 +43,20 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     /* Red alliance sees forward as 180 degrees (toward blue alliance wall) */
     private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.k180deg;
     /* Keep track if we've ever applied the operator perspective before or not */
+    
     private boolean m_hasAppliedOperatorPerspective = false;
 
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
     private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
+
+    /** Swerve request to apply during robot-centric path following */
+    private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new SwerveRequest.ApplyRobotSpeeds();
+
+    // private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
+    //         .withDeadband(m_maxSpeed * 0.1) // Add a 10% deadband
+    //         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);// Use open-loop control for drive motors
 
     /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
     private final SysIdRoutine m_sysIdRoutineTranslation = new SysIdRoutine(
@@ -112,7 +120,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     /* The SysId routine to test */
     private SysIdRoutine m_sysIdRoutineToApply = m_sysIdRoutineTranslation;
 
-    /**
+   /**
      * Constructs a CTRE SwerveDrivetrain using the specified constants.
      * <p>
      * This constructs the underlying hardware devices, so users should not construct
@@ -220,9 +228,35 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
+    // robot alignment to hub using absolute field x, y data and slope calc
+    // public void botToHubSlopeCalc() {
+    //     double xHub = fieldConstants.hubCentricXInMeters;
+    //     double yHub = fieldConstants.hubCentricXInMeters;
+    // }
+
+    // public Pose2d swervePoseCombination(){
+    //     double x1 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose.getX();
+    //     double y1 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-one").pose.getY();
+    //     double x2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two").pose.getX();
+    //     double y2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-two").pose.getY();
+
+    //     double storedPoseX = (x1 + x2) / 2;
+    //     double storedPoseY = (y1 + y2) / 2;
+        
+    //     Translation2d m_translation = new Translation2d(storedPoseX, storedPoseY);
+    //     Rotation2d m_rotation = swerveRotationCombination();
+    //     return new Pose2d(m_translation, m_rotation);
+    //
+
+    // Pigeon Reset
+    public void resetPigeon(){
+        this.seedFieldCentric();
+    };
+
+    
     @Override
     public void periodic() {
-        /*
+        /*%
          * Periodically try to apply the operator perspective.
          * If we haven't applied the operator perspective before, then we should apply it regardless of DS state.
          * This allows us to correct the perspective in case the robot code restarts mid-match.
@@ -255,7 +289,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         });
         m_simNotifier.startPeriodic(kSimLoopPeriod);
     }
-
+    
     /**
      * Adds a vision measurement to the Kalman Filter. This will correct the odometry pose estimate
      * while still accounting for measurement noise.
@@ -268,19 +302,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         super.addVisionMeasurement(visionRobotPoseMeters, Utils.fpgaToCurrentTime(timestampSeconds));
     }
 
-    /**
-     * Adds a vision measurement to the Kalman Filter. This will correct the odometry pose estimate
-     * while still accounting for measurement noise.
-     * <p>
-     * Note that the vision measurement standard deviations passed into this method
-     * will continue to apply to future measurements until a subsequent call to
-     * {@link #setVisionMeasurementStdDevs(Matrix)} or this method.
-     *
-     * @param visionRobotPoseMeters The pose of the robot as measured by the vision camera.
-     * @param timestampSeconds The timestamp of the vision measurement in seconds.
-     * @param visionMeasurementStdDevs Standard deviations of the vision pose measurement
-     *     in the form [x, y, theta]ᵀ, with units in meters and radians.
-     */
     @Override
     public void addVisionMeasurement(
         Pose2d visionRobotPoseMeters,
@@ -300,4 +321,4 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     public Optional<Pose2d> samplePoseAt(double timestampSeconds) {
         return super.samplePoseAt(Utils.fpgaToCurrentTime(timestampSeconds));
     }
-}
+};
