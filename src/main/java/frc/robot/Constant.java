@@ -35,13 +35,13 @@ public class Constant {
         public static final int encoder = 33;
         
         // PID extend
-        public static final double extendP = 10;
+        public static final double extendP = 2;
         public static final double extendI = 0;
         public static final double extendD = 0;
         public static final double extendF = 0; 
 
         // PID systole
-        public static final double systoleP = 10;
+        public static final double systoleP = 0;
         public static final double systoleI = 0;
         public static final double systoleD = 0;
         public static final double systoleF = 0;

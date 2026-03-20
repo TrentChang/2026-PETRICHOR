@@ -22,19 +22,17 @@ public class Intake extends SubsystemBase{
 
     public Intake(){
         var intakeCtrlConfig = intakeExtend.getConfigurator();
-        // intakeMotorConfig.Inverted  = InvertedValue.CounterClockwise_Positive;
-
+        intakeExtend.setNeutralMode(NeutralModeValue.Brake);
         // set feedback sensor as integrated sensor
         intakeCtrlConfig.apply(new FeedbackConfigs()
-                .withFeedbackSensorSource(FeedbackSensorSourceValue.RemoteCANcoder)
-                .withFeedbackRemoteSensorID(intakeConstant.encoder));
+                .withFeedbackSensorSource(FeedbackSensorSourceValue.FusedCANcoder) // do not use remote sensor
+                .withFeedbackRemoteSensorID(intakeConstant.encoder)
+                .withSensorToMechanismRatio(48.0/32.0));
 
         // set maximum acceleration and velocity        
         intakeCtrlConfig.apply(new MotionMagicConfigs()
-                .withMotionMagicAcceleration(500)
-                .withMotionMagicCruiseVelocity(200));
-
-        intakeRoller.setNeutralMode(NeutralModeValue.Brake);// intakeExtend.getConfigurator().apply(intakeMotorConfig);
+                .withMotionMagicAcceleration(100)
+                .withMotionMagicCruiseVelocity(50));
         
         // Pivot PIDConfig
         // TODO:adjust PID value
@@ -53,23 +51,34 @@ public class Intake extends SubsystemBase{
         intakeSystolePIDConfig.kD = intakeConstant.systoleD;
         intakeSystolePIDConfig.kV = intakeConstant.systoleF;
         intakeCtrlConfig.apply(intakeSystolePIDConfig);
+
+        intakeENcoder.setPosition(0.0);
     }
 
     // intake extend
     public void intakeExtend() {
-        intakeExtend.setControl(new MotionMagicDutyCycle(0).withSlot(0));
+        intakeExtend.setControl(new MotionMagicDutyCycle(0.3).withSlot(0));
     }
 
     // intake systole
     public void intakeSystole() {
-        intakeExtend.setControl(new MotionMagicDutyCycle(0.130859
-        
-        ).withSlot(1));
+        intakeExtend.setControl(new MotionMagicDutyCycle(-0.1).withSlot(1));
     }
 
     // intake setzero
-    public void intakeSetDefault() {
-        intakeExtend.setControl(new MotionMagicDutyCycle(null).withSlot(0));
+    // public void intakeSetPosDefault() {
+    //     intakeExtend.setControl(new MotionMagicDutyCycle(null).withSlot(0));
+    // }
+
+    // intaking
+    public void intakeInhale() {
+        intakeRoller.set(0.25);
+    }
+
+    // stop
+    public void intakeStop() {
+        intakeRoller.set(0.0);
+
     }
 
     @Override

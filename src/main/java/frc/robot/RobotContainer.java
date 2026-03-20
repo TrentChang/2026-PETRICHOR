@@ -46,6 +46,9 @@ public class RobotContainer {
                     .onFalse(new InstantCommand(conveyor::converyStop, conveyor));
         joystick.b().whileTrue(flywheel.dashboardSpinUpCommand())
                     .onFalse(new InstantCommand(flywheel::stop, flywheel));
+        joystick.x().onTrue(new InstantCommand(intake::intakeExtend, intake));
+        joystick.y().onTrue(new InstantCommand(intake::intakeSystole, intake));
+
 
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
