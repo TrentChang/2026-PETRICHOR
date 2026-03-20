@@ -7,14 +7,18 @@ import java.util.function.Supplier;
 
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
+import com.ctre.phoenix6.hardware.Pigeon2;
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -25,9 +29,13 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.LimelightHelpers;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
+import frc.robot.Constant.autoAimConstant;
+import frc.robot.Constant.canBUS;
+import frc.robot.Constant.pigeon2Constant;
 // import choreo.auto.AutoRoutine;
 
 /**
@@ -42,9 +50,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
 
+    private Pigeon2 m_pigeon2 = new Pigeon2(pigeon2Constant.pigeon2, canBUS.rio);
+
     // megaTag2
     LimelightHelpers.PoseEstimate mt2;
     private final Field2d m_field = new Field2d();
+    private Boolean doRejectUpdate = false;
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.k180deg;
@@ -233,13 +244,71 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
+    // Auto align
+    public final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
+            .withDeadband(autoAimConstant.maxSpeed * 0.1)
+            .withRotationalDeadband(autoAimConstant.maxAngularRate * 0.01) // Add a 10% deadband
+            .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // use SwerveModule DrvieRequestType import instead of Legacy
+
+    public Command autoAlignCommand(CommandXboxController driverCtrl) {
+        return applyRequest(() -> {
+            double controllerVelX = -driverCtrl.getLeftX();
+            double controllerVelY = -driverCtrl.getLeftY();
+
+            Pose2d drivePose = getState().Pose;
+            Pose2d targetPose = autoAimConstant.getHubPose().toPose2d();
+            
+            Translation2d deltaDis = targetPose.relativeTo(drivePose).getTranslation();
+            
+            Rotation2d desiredAngle = deltaDis.getAngle();
+            Rotation2d currentAngle = drivePose.getRotation();
+            Rotation2d deltaAngle = currentAngle.minus(desiredAngle);
+            
+            double wrappedAngleDeg = MathUtil.inputModulus(deltaAngle.getDegrees(), -180, 180);
+            
+            if ((Math.abs(wrappedAngleDeg) < autoAimConstant.epsilonAngleToGoal.in(Degrees)) // if facing goal already
+               && Math.hypot(controllerVelX, controllerVelY) < 0.1) {
+                return new SwerveRequest.SwerveDriveBrake();
+            } else {
+                double vx = controllerVelY * autoAimConstant.maxSpeed;
+                double vy = controllerVelX * autoAimConstant.maxSpeed;
+                
+                // feedforward
+                double dx = deltaDis.getX(), dy = deltaDis.getY();
+                double rSquare = (dx*dx + dy*dy);
+                
+                double vw = autoAimConstant.doReverse() *((dy*vx - dx*vy)) / rSquare ;
+                    
+                // feedback
+                double feedback = autoAimConstant.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
+
+                vw += feedback;
+                vw = MathUtil.clamp(vw, -autoAimConstant.maxAngularRate, autoAimConstant.maxAngularRate);
+
+                return alignDrive
+                        .withVelocityX(vx) // Drive forward with negative Y (forward)
+                        .withVelocityY(vy) // Drive left with negative X (left)
+                        .withRotationalRate(vw*1.151); // Use angular rate for rotation (rad/s)
+            }
+        });
+    };
+
     @Override
     public void periodic() {
         // field2D on smartDashBoard
         LimelightHelpers.SetRobotOrientation(Limelight.limelightUsing, getState().Pose.getRotation().getDegrees(), 0, 0, 0, 0, 0);
-        mt2 = Limelight.mt2;
+        mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(Limelight.limelightUsing);
 
-        if (!Limelight.doRejectUpdate) {
+        if (!Limelight.badTagData) {
+            if (Math.abs(m_pigeon2.getAngularVelocityZWorld().getValueAsDouble()) > 720){
+                doRejectUpdate = true;
+            }
+            if (mt2.tagCount == 0){
+                doRejectUpdate = true;
+            }
+        }
+
+        if (!doRejectUpdate) {
             addVisionMeasurement(mt2.pose, mt2.timestampSeconds, VecBuilder.fill(0.003, 0.003, 9999999));
         }
         
@@ -257,8 +326,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             DriverStation.getAlliance().ifPresent(allianceColor -> {
                 setOperatorPerspectiveForward(
                     allianceColor == Alliance.Blue
-                        ? kRedAlliancePerspectiveRotation
-                        : kBlueAlliancePerspectiveRotation
+                        ? kBlueAlliancePerspectiveRotation 
+                        : kRedAlliancePerspectiveRotation 
                 );
                 m_hasAppliedOperatorPerspective = true;
             });
