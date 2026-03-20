@@ -27,12 +27,14 @@ import frc.robot.Constant.shooterConstant;
 import frc.robot.Constant.KrakenX60;
 
 public class Flywheel extends SubsystemBase{
-    private static final AngularVelocity kVelocityTolerance = RPM.of(2000);
+    private static final AngularVelocity kVelocityTolerance = RPM.of(100);
 
     private final TalonFX FRMotor, BRMotor, FLMotor, BLMotor;
     private final List<TalonFX> motors;
     private final VelocityVoltage velocityRequest = new VelocityVoltage(0).withSlot(0);
     private final VoltageOut voltageRequest = new VoltageOut(0);
+
+    private double dashboardTargetRPM = 2200;
 
     public Flywheel() {
         FRMotor = new TalonFX(shooterConstant.FR, "CANivore");
@@ -44,8 +46,8 @@ public class Flywheel extends SubsystemBase{
         //TODO: Adjust inverted value of shooter motor
         configureMotor(FRMotor, InvertedValue.Clockwise_Positive);
         configureMotor(BRMotor, InvertedValue.Clockwise_Positive);
-        configureMotor(FLMotor, InvertedValue.Clockwise_Positive);
-        configureMotor(BLMotor, InvertedValue.Clockwise_Positive);
+        configureMotor(FLMotor, InvertedValue.CounterClockwise_Positive);
+        configureMotor(BLMotor, InvertedValue.CounterClockwise_Positive);
     }
 
     private void configureMotor(TalonFX motor, InvertedValue invertedDirection) {
@@ -103,6 +105,10 @@ public class Flywheel extends SubsystemBase{
     public Command spinUpCommand(double rpm) {
         return runOnce(() -> setRPM(rpm))
             .andThen(Commands.waitUntil(this::isVelocityWithinTolerance));  
+    }
+
+    public Command dashboardSpinUpCommand() {
+        return defer(() -> spinUpCommand(dashboardTargetRPM)); 
     }
 
     public boolean isVelocityWithinTolerance() {
