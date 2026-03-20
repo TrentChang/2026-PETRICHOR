@@ -12,13 +12,13 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-
+import frc.robot.Constant.canBUS;
 import frc.robot.Constant.intakeConstant;
 
 public class Intake extends SubsystemBase{
-    private final TalonFX intakeExtend = new TalonFX(intakeConstant.extend, "CANivore");
-    private final TalonFX intakeRoller = new TalonFX(intakeConstant.roller, "CANivore");
-    private final CANcoder intakeENcoder = new CANcoder(intakeConstant.encoder, "CANivore");
+    private final TalonFX intakeExtend = new TalonFX(intakeConstant.extend, canBUS.canivore);
+    private final TalonFX intakeRoller = new TalonFX(intakeConstant.roller, canBUS.canivore);
+    private final CANcoder intakeENcoder = new CANcoder(intakeConstant.encoder, canBUS.canivore);
 
     public Intake(){
         var intakeCtrlConfig = intakeExtend.getConfigurator();
@@ -53,8 +53,6 @@ public class Intake extends SubsystemBase{
         intakeSystolePIDConfig.kD = intakeConstant.systoleD;
         intakeSystolePIDConfig.kV = intakeConstant.systoleF;
         intakeCtrlConfig.apply(intakeSystolePIDConfig);
-
-        intakeExtend.setPosition(0);
     }
 
     // intake extend
@@ -64,7 +62,9 @@ public class Intake extends SubsystemBase{
 
     // intake systole
     public void intakeSystole() {
-        intakeExtend.setControl(new MotionMagicDutyCycle(0).withSlot(1));
+        intakeExtend.setControl(new MotionMagicDutyCycle(0.130859
+        
+        ).withSlot(1));
     }
 
     // intake setzero

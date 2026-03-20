@@ -25,6 +25,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.Constant.shooterConstant;
 import frc.robot.Constant.KrakenX60;
+import frc.robot.Constant.canBUS;
 
 public class Flywheel extends SubsystemBase{
     private static final AngularVelocity kVelocityTolerance = RPM.of(100);
@@ -34,16 +35,16 @@ public class Flywheel extends SubsystemBase{
     private final VelocityVoltage velocityRequest = new VelocityVoltage(0).withSlot(0);
     private final VoltageOut voltageRequest = new VoltageOut(0);
 
+    //TODO: adjust rpm during different circumstances
     private double dashboardTargetRPM = 2200;
 
     public Flywheel() {
-        FRMotor = new TalonFX(shooterConstant.FR, "CANivore");
-        BRMotor = new TalonFX(shooterConstant.BR, "CANivore");
-        FLMotor = new TalonFX(shooterConstant.FL, "CANivore");
-        BLMotor = new TalonFX(shooterConstant.BL, "CANivore");
+        FRMotor = new TalonFX(shooterConstant.FR, canBUS.canivore);
+        BRMotor = new TalonFX(shooterConstant.BR, canBUS.canivore);
+        FLMotor = new TalonFX(shooterConstant.FL, canBUS.canivore);
+        BLMotor = new TalonFX(shooterConstant.BL, canBUS.canivore);
         motors = List.of(FRMotor, BRMotor, FLMotor, BLMotor);
 
-        //TODO: Adjust inverted value of shooter motor
         configureMotor(FRMotor, InvertedValue.Clockwise_Positive);
         configureMotor(BRMotor, InvertedValue.Clockwise_Positive);
         configureMotor(FLMotor, InvertedValue.CounterClockwise_Positive);
