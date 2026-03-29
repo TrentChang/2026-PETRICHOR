@@ -17,8 +17,6 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.generated.TunerConstants;
 
 public class Constant {
-    private static int fieldReverse;
-
     public static class canBUS {
         public static final String rio = "rio";
         public static final String canivore = "CANivore";
@@ -71,50 +69,49 @@ public class Constant {
     }
 
     public static class hoodConstant {
-        public static final int angle = 41;
-        public static final int encoder = 42;
+        public static final int angle = 25;
+        public static final int encoder = 26;
+
+        public static final double minAngel = 0.1;
+        public static final double maxAngle = 0.9;
+
+        public static final double kP = 0.1;
+        public static final double kI = 0.0;
+        public static final double kD = 0.0;
     }
 
     public static class limelightConstant {
-        public static final String FR = "limelight-FR";
-        public static final String FL = "limelight-FL";
+        public static final String FM = "limelight-fm";
+        public static final String FL = "limelight-fl";
+
+        public static final double limelgihtMountingAngleDeg = 45.0;
+        public static final double limelightLensHeightIn = 45.0; //TODO: adjust lens height of lens mi
     }
 
     public static class autoAimConstant {
         public static final double maxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
         public static final double maxAngularRate = Units.RotationsPerSecond.of(0.75).in(Units.RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
-        
-        //wpiblue view
-        // public static final Pose3d redHubPose = new Pose3d(Units.Meters.of(11.91), Units.Meters.of(4.03), Units.Meters.of(1.83), new Rotation3d());
-        // public static final Pose3d blueHubPose = new Pose3d(Units.Meters.of(3.88), Units.Meters.of(4.03),  Units.Meter.of(1.83), new Rotation3d());
-        public static final Pose3d redHubPose = new Pose3d(Units.Inches.of(468.56), Units.Inches.of(158.32), Units.Inches.of(72.0), new Rotation3d());
-        public static final Pose3d blueHubPose = new Pose3d(Units.Inches.of(152.56), Units.Inches.of(158.32),  Units.Inches.of(72.0), new Rotation3d());
 
         public static final Angle epsilonAngleToGoal = Degree.of(0.1); //robot will stop if it's in range of 5deg
 
         public static final PIDController rotationController = getRotationController();
 
         private static final PIDController getRotationController() {
-            PIDController controller = new PIDController(1.5 , 0.0, 0.00514); 
+            PIDController controller = new PIDController(3 , 0.0, 0.00514); 
             controller.enableContinuousInput(-Math.PI, Math.PI);
             return controller;
         }
+    }
+
+    public static class hubConstants {
+        //wpiblue view
+        public static final Pose3d redHubPose = new Pose3d(Units.Meters.of(11.91), Units.Meters.of(4.03), Units.Meters.of(1.83), new Rotation3d());
+        public static final Pose3d blueHubPose = new Pose3d(Units.Meters.of(3.88), Units.Meters.of(4.03),  Units.Meter.of(1.83), new Rotation3d());
 
         //decide blue or red hub pose by driverstation
         public static final Pose3d getHubPose() {
             Pose3d hubPose = DriverStation.getAlliance().equals(Optional.of(Alliance.Blue)) ? blueHubPose : redHubPose;
             return hubPose;
-        }
-
-        public static int doReverse() {
-            if (getHubPose() == blueHubPose) {
-                fieldReverse = 1;
-            }
-            else {
-                fieldReverse = -1;
-            }
-
-            return fieldReverse;
         }
     }
 }

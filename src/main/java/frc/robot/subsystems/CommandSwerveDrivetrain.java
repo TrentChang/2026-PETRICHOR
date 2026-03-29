@@ -35,6 +35,7 @@ import frc.robot.LimelightHelpers;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 import frc.robot.Constant.autoAimConstant;
 import frc.robot.Constant.canBUS;
+import frc.robot.Constant.hubConstants;
 import frc.robot.Constant.pigeon2Constant;
 // import choreo.auto.AutoRoutine;
 
@@ -53,14 +54,15 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private Pigeon2 m_pigeon2 = new Pigeon2(pigeon2Constant.pigeon2, canBUS.rio);
 
     // megaTag2
+    private String limelightUsing;
     LimelightHelpers.PoseEstimate mt2;
     private final Field2d m_field = new Field2d();
     private Boolean doRejectUpdate = false;
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
-    private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.k180deg;
+    private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
     /* Red alliance sees forward as 180 degrees (toward blue alliance wall) */
-    private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.kZero;
+    private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.k180deg;
     /* Keep track if we've ever applied the operator perspective before or not */
     
     private boolean m_hasAppliedOperatorPerspective = false;
@@ -256,7 +258,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             double controllerVelY = -driverCtrl.getLeftY();
 
             Pose2d drivePose = getState().Pose;
-            Pose2d targetPose = autoAimConstant.getHubPose().toPose2d();
+            Pose2d targetPose = hubConstants.getHubPose().toPose2d();
             
             Translation2d deltaDis = targetPose.relativeTo(drivePose).getTranslation();
             
@@ -265,6 +267,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             Rotation2d deltaAngle = currentAngle.minus(desiredAngle);
             
             double wrappedAngleDeg = MathUtil.inputModulus(deltaAngle.getDegrees(), -180, 180);
+            int doReverse = DriverStation.getAlliance().equals(Optional.of(Alliance.Blue)) ? 1 : -1;
             
             if ((Math.abs(wrappedAngleDeg) < autoAimConstant.epsilonAngleToGoal.in(Degrees)) // if facing goal already
                && Math.hypot(controllerVelX, controllerVelY) < 0.1) {
@@ -277,7 +280,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 double dx = deltaDis.getX(), dy = deltaDis.getY();
                 double rSquare = (dx*dx + dy*dy);
                 
-                double vw = autoAimConstant.doReverse() *((dy*vx - dx*vy)) / rSquare ;
+                double vw = doReverse*((dy*vx - dx*vy)) / rSquare ;
                     
                 // feedback
                 double feedback = autoAimConstant.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
@@ -288,7 +291,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 return alignDrive
                         .withVelocityX(vx) // Drive forward with negative Y (forward)
                         .withVelocityY(vy) // Drive left with negative X (left)
-                        .withRotationalRate(vw*1.151); // Use angular rate for rotation (rad/s)
+                        .withRotationalRate(vw*1.2); // Use angular rate for rotation (rad/s)
             }
         });
     };
@@ -296,10 +299,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     @Override
     public void periodic() {
         // field2D on smartDashBoard
-        LimelightHelpers.SetRobotOrientation(Limelight.limelightUsing, getState().Pose.getRotation().getDegrees(), 0, 0, 0, 0, 0);
-        mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(Limelight.limelightUsing);
+        limelightUsing = Limelight.limelightUsing();
 
-        if (!Limelight.badTagData) {
+        LimelightHelpers.SetRobotOrientation(limelightUsing, getState().Pose.getRotation().getDegrees(), 0, 0, 0, 0, 0);
+        mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(limelightUsing);
+
+        if (!Limelight.badTagData()) {
+            doRejectUpdate = false;
             if (Math.abs(m_pigeon2.getAngularVelocityZWorld().getValueAsDouble()) > 720){
                 doRejectUpdate = true;
             }
