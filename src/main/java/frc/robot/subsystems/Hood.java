@@ -17,21 +17,15 @@ import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.CAN;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constant.canBUS;
 import frc.robot.Constant.hoodConstant;
-import frc.robot.Constant.hubConstants;
-import frc.robot.generated.TunerConstants;
 
 public class Hood extends SubsystemBase {
-    private final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
-    private  double desireDistanceToHub;
+    //  private final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     private  double desireAngleToShoot;
     private static final double minAngle = Units.degreesToRadians(hoodConstant.minAngel);
     private static final double maxAngle = Units.degreesToRadians(hoodConstant.maxAngle);
@@ -46,33 +40,23 @@ public class Hood extends SubsystemBase {
     public Hood() {
         TalonFXConfiguration configs = new TalonFXConfiguration()
             .withFeedback(new FeedbackConfigs()
-            .withFeedbackSensorSource(FeedbackSensorSourceValue.RemoteCANcoder)
+            .withFeedbackSensorSource(FeedbackSensorSourceValue.FusedCANcoder)
             .withFeedbackRemoteSensorID(hoodConstant.encoder)
-            .withSensorToMechanismRatio(2.0/3.0/45.0));
+            .withSensorToMechanismRatio(1));
         configs.Slot0.kP = hoodConstant.kP;
         configs.Slot0.kI = hoodConstant.kI;
         configs.Slot0.kD = hoodConstant.kD;
+        configs.Slot0.kS = hoodConstant.kS;
 
         //hoodMotor.setNeutralMode(NeutralModeValue.Brake);
-        //configs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        configs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         configs.Voltage.withPeakForwardVoltage(Volts.of(12))
                         .withPeakReverseVoltage(Volts.of(-12));
 
-        // StatusCode status = StatusCode.StatusCodeNotInitialized;
         hoodMotor.getConfigurator().apply(configs);
 
-        // Retry config apply up to 10 times, report if failure
-        // for (int i = 0; i < 10; i ++){
-        //     if (status.isOK()) {
-        //         break;
-        //     }
-        // }
-        // if (!status.isOK()) {
-        //     System.out.println("Could not apply configs, error code: " + status.toString());
-        // }
-
         // motor start at 0.0
-        // hoodMotor.setPosition(0.0);
+        hoodMotor.setPosition(0.0);
     }
 
     // private final double distanceToHub() {
@@ -87,12 +71,12 @@ public class Hood extends SubsystemBase {
         hoodMotor.setControl(m_positionVoltage.withPosition(desireAngleToShoot));
     }
 
-    public void setPos0() {
-        hoodMotor.setControl(m_positionVoltage.withPosition(0.9));
+    public void setPosLow() {
+        hoodMotor.setControl(m_positionVoltage.withPosition(-0.2));
     }
 
-    public void setPosMax() {
-        hoodMotor.setControl(m_positionVoltage.withPosition(0.1));
+    public void setPosHigh() {
+        hoodMotor.setControl(m_positionVoltage.withPosition(-1.0));
     }
 
     @Override
