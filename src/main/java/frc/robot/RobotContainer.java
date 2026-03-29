@@ -12,11 +12,13 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-
+import frc.robot.Constant.hoodConstant;
+import frc.robot.commands.autoAim;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.Conveyor;
 import frc.robot.subsystems.Flywheel;
+import frc.robot.subsystems.Hood;
 import frc.robot.subsystems.Intake;
 
 public class RobotContainer {
@@ -32,23 +34,31 @@ public class RobotContainer {
 
     private final CommandXboxController joystick = new CommandXboxController(0);
 
+    // Subsystem
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
     public final Intake intake = new Intake();
-    public final Flywheel flywheel = new Flywheel();
     public final Conveyor conveyor = new Conveyor();
+    public final Flywheel flywheel = new Flywheel();
+    public final Hood hood = new Hood();
+
+    // Command
+    public final autoAim mAutoAim = new autoAim(drivetrain, joystick);
 
     public RobotContainer() {
         configureBindings();
     }
 
     private void configureBindings() {
-        joystick.a().whileTrue(new InstantCommand(conveyor::conveyorTransmiss, conveyor))
-                    .onFalse(new InstantCommand(conveyor::converyStop, conveyor));
+        // joystick.a().whileTrue(new InstantCommand(conveyor::conveyorTransmiss, conveyor))
+        //             .onFalse(new InstantCommand(conveyor::converyStop, conveyor));
         joystick.b().whileTrue(flywheel.dashboardSpinUpCommand())
                     .onFalse(new InstantCommand(flywheel::stop, flywheel));
-        joystick.x().onTrue(new InstantCommand(intake::intakeExtend, intake));
-        joystick.y().onTrue(new InstantCommand(intake::intakeSystole, intake));
+        // joystick.x().onTrue(new InstantCommand(intake::intakeExtend, intake));
+        // joystick.y().onTrue(new InstantCommand(intake::intakeSystole, intake));
 
+        joystick.a().whileTrue(mAutoAim);
+        joystick.x().onTrue(new InstantCommand(hood::setPos0, hood));
+        joystick.y().onTrue(new InstantCommand(hood::setPosMax, hood));
 
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.

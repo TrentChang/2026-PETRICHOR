@@ -1,5 +1,7 @@
 package frc.robot.subsystems;
 
+import java.util.concurrent.CancellationException;
+
 import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
