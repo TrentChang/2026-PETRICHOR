@@ -57,8 +57,8 @@ public class RobotContainer {
         // joystick.y().onTrue(new InstantCommand(intake::intakeSystole, intake));
 
         joystick.a().whileTrue(mAutoAim);
-        joystick.x().onTrue(new InstantCommand(hood::setPos0, hood));
-        joystick.y().onTrue(new InstantCommand(hood::setPosMax, hood));
+        joystick.x().onTrue(new InstantCommand(hood::setPosLow, hood));
+        joystick.y().onTrue(new InstantCommand(hood::setPosHigh, hood));
 
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.

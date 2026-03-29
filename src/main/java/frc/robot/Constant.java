@@ -72,25 +72,22 @@ public class Constant {
         public static final int angle = 25;
         public static final int encoder = 26;
 
-        public static final double minAngel = 0.1;
-        public static final double maxAngle = 0.9;
+        public static final double minAngel = -1.275;
+        public static final double maxAngle = -0.01;
 
-        public static final double kP = 0.1;
-        public static final double kI = 0.0;
-        public static final double kD = 0.0;
+        public static final double kP = 65;
+        public static final double kI = 1.2;
+        public static final double kD = 0.3;
+        public static final double kS = 1.0;
     }
 
     public static class limelightConstant {
         public static final String FM = "limelight-fm";
         public static final String FL = "limelight-fl";
-
-        public static final double limelgihtMountingAngleDeg = 45.0;
-        public static final double limelightLensHeightIn = 45.0; //TODO: adjust lens height of lens mi
     }
 
     public static class autoAimConstant {
         public static final double maxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
-        public static final double maxAngularRate = Units.RotationsPerSecond.of(0.75).in(Units.RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
 
         public static final Angle epsilonAngleToGoal = Degree.of(0.1); //robot will stop if it's in range of 5deg
 
