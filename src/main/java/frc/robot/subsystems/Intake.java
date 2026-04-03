@@ -1,15 +1,18 @@
 package frc.robot.subsystems;
 
-import java.util.concurrent.CancellationException;
+import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.Slot1Configs;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicDutyCycle;
+import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
+import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -22,49 +25,37 @@ public class Intake extends SubsystemBase{
     private final TalonFX intakeRoller = new TalonFX(intakeConstant.roller, canBUS.canivore);
     private final CANcoder intakeENcoder = new CANcoder(intakeConstant.encoder, canBUS.canivore);
 
+    private final PositionVoltage m_positionVoltage = new PositionVoltage(0).withSlot(0);
+
     public Intake(){
-        var intakeCtrlConfig = intakeExtend.getConfigurator();
-        intakeExtend.setNeutralMode(NeutralModeValue.Brake);
-        // set feedback sensor as integrated sensor
-        intakeCtrlConfig.apply(new FeedbackConfigs()
-                .withFeedbackSensorSource(FeedbackSensorSourceValue.FusedCANcoder) // do not use remote sensor
-                .withFeedbackRemoteSensorID(intakeConstant.encoder)
-                .withSensorToMechanismRatio(48.0/32.0));
-
-        // set maximum acceleration and velocity        
-        intakeCtrlConfig.apply(new MotionMagicConfigs()
-                .withMotionMagicAcceleration(100)
-                .withMotionMagicCruiseVelocity(50));
+       TalonFXConfiguration configs = new TalonFXConfiguration()
+            .withFeedback(new FeedbackConfigs()
+            .withFeedbackSensorSource(FeedbackSensorSourceValue.FusedCANcoder)
+            .withFeedbackRemoteSensorID(intakeConstant.encoder)
+            .withSensorToMechanismRatio(1));
+        configs.Slot0.kP = intakeConstant.kP;
+        configs.Slot0.kI = intakeConstant.kI;
+        configs.Slot0.kD = intakeConstant.kD;
+        configs.Slot0.kS = intakeConstant.kS;
         
-        // Pivot PIDConfig
-        // TODO:adjust PID value
-        Slot0Configs intakeExtendPIDConfig = new Slot0Configs();
-        intakeExtendPIDConfig.kP = intakeConstant.extendP;
-        intakeExtendPIDConfig.kI = intakeConstant.extendI;
-        intakeExtendPIDConfig.kD = intakeConstant.extendD;
-        intakeExtendPIDConfig.kV = intakeConstant.extendF;
-        intakeCtrlConfig.apply(intakeExtendPIDConfig);
+        configs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
 
-        // Pivot PIDConfig
-        // TODO:adjust PID value
-        Slot1Configs intakeSystolePIDConfig = new Slot1Configs();
-        intakeSystolePIDConfig.kP = intakeConstant.systoleP;
-        intakeSystolePIDConfig.kI = intakeConstant.systoleI;
-        intakeSystolePIDConfig.kD = intakeConstant.systoleD;
-        intakeSystolePIDConfig.kV = intakeConstant.systoleF;
-        intakeCtrlConfig.apply(intakeSystolePIDConfig);
+        intakeExtend.setNeutralMode(NeutralModeValue.Coast);
 
-        intakeENcoder.setPosition(0.0);
+        configs.Voltage.withPeakForwardVoltage(Volts.of(12))
+                        .withPeakReverseVoltage(Volts.of(-12));
+                        
+        intakeExtend.getConfigurator().apply(configs);
     }
 
     // intake extend
     public void intakeExtend() {
-        intakeExtend.setControl(new MotionMagicDutyCycle(0.3).withSlot(0));
+        intakeExtend.setControl(m_positionVoltage.withPosition(4.0));
     }
 
     // intake systole
     public void intakeSystole() {
-        intakeExtend.setControl(new MotionMagicDutyCycle(-0.1).withSlot(1));
+        intakeExtend.setControl(m_positionVoltage.withPosition(0.5));
     }
 
     // intake setzero
@@ -80,12 +71,11 @@ public class Intake extends SubsystemBase{
     // stop
     public void intakeStop() {
         intakeRoller.set(0.0);
-
     }
 
     @Override
     public void periodic() {
         // Output encoder angle value
-        SmartDashboard.putNumber("Intake Encoder", intakeENcoder.getAbsolutePosition().getValueAsDouble());
+        SmartDashboard.putNumber("Intake Encoder", intakeENcoder.getPosition().getValueAsDouble());
     }
 }
