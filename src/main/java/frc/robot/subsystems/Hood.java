@@ -1,41 +1,33 @@
 package frc.robot.subsystems;
 
-import static edu.wpi.first.units.Units.Amps;
-import static edu.wpi.first.units.Units.Meter;
-import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Volts;
 
-import java.security.PublicKey;
+import java.util.function.Supplier;
 
-import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.NeutralOut;
-import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constant.canBUS;
 import frc.robot.Constant.hoodConstant;
 
 public class Hood extends SubsystemBase {
-    //  private final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
-    private  double desireAngleToShoot;
-    private static final double minAngle = Units.degreesToRadians(hoodConstant.minAngel);
-    private static final double maxAngle = Units.degreesToRadians(hoodConstant.maxAngle);
+    private static final double minAngle = hoodConstant.minAngle;
+    private static final double maxAngle = hoodConstant.maxAngle;
 
     public TalonFX hoodMotor = new TalonFX(hoodConstant.angle, canBUS.canivore);
     public CANcoder hoodEncoder = new CANcoder(hoodConstant.encoder, canBUS.canivore);
 
     private final PositionVoltage m_positionVoltage = new PositionVoltage(0).withSlot(0);
-    // Keep a brake request so we can disable the motor
-    private final NeutralOut m_brake = new NeutralOut();
 
     public Hood() {
         TalonFXConfiguration configs = new TalonFXConfiguration()
@@ -46,46 +38,47 @@ public class Hood extends SubsystemBase {
         configs.Slot0.kP = hoodConstant.kP;
         configs.Slot0.kI = hoodConstant.kI;
         configs.Slot0.kD = hoodConstant.kD;
-        configs.Slot0.kS = hoodConstant.kS;
+        configs.Slot0.kS = hoodConstant.kS; // voltage support to overcome friction
 
-        //hoodMotor.setNeutralMode(NeutralModeValue.Brake);
-        configs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        // set motor brake
+        hoodMotor.setNeutralMode(NeutralModeValue.Brake);   
+
         configs.Voltage.withPeakForwardVoltage(Volts.of(12))
                         .withPeakReverseVoltage(Volts.of(-12));
 
-        hoodMotor.getConfigurator().apply(configs);
+        configs.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
-        // motor start at 0.0
-        hoodMotor.setPosition(0.0);
+        hoodMotor.getConfigurator().apply(configs);
     }
 
-    // private final double distanceToHub() {
-    //     Pose2d currentPose2d = drivetrain.getState().Pose;
-    //     Pose2d targetPosed2d = hubConstants.getHubPose().toPose2d();
-            
-    //     double distanceToHub = targetPosed2d.relativeTo(currentPose2d).getTranslation().getDistance();    
-    //     return distanceToHub;
-    // }
+    public double hoodAngle(double distanceToHub) {
+        double angle = (-0.0433 * Math.pow(distanceToHub, 2)) + (0.08294 * (distanceToHub)) + (-0.04094);
+        if (angle < hoodConstant.maxAngle) {angle = maxAngle;}
+        else if (angle > hoodConstant.minAngle) {angle = minAngle;} 
+        SmartDashboard.putNumber("hood angle ctrl", angle);
+        return angle;
+    }
     
-    public void hoodSetPos() {
-        hoodMotor.setControl(m_positionVoltage.withPosition(desireAngleToShoot));
+    public Command hoodSetPos(Supplier<Double> distance) {
+        //hoodMotor.setControl(m_positionVoltage.withPosition(hoodAngle(distance)));
+        return run(()-> hoodMotor.setControl(
+            m_positionVoltage.withPosition(
+                hoodAngle(distance.get())
+            )
+        ));
     }
 
     public void setPosLow() {
-        hoodMotor.setControl(m_positionVoltage.withPosition(-0.2));
+        hoodMotor.setControl(m_positionVoltage.withPosition(minAngle));
     }
-
+    
     public void setPosHigh() {
-        hoodMotor.setControl(m_positionVoltage.withPosition(-1.0));
+
+        hoodMotor.setControl(m_positionVoltage.withPosition(-0.8)); 
     }
 
-    @Override
+    @Override   
     public void periodic() {
-        // desireDistanceToHub = distanceToHub();
-        // desireAngleToShoot = angleToShoot();
-        // SmartDashboard.putNumber("Absolute distance of HUB", desireDistanceToHub);
-        SmartDashboard.putNumber("Hood angle", hoodEncoder.getAbsolutePosition().getValueAsDouble());
-        
-        desireAngleToShoot = SmartDashboard.getNumber("set hood angle", maxAngle);
+        SmartDashboard.putNumber("Hood angle", hoodEncoder.getPosition().getValueAsDouble());
     }
 }

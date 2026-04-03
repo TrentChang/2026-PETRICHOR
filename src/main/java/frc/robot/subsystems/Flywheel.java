@@ -19,11 +19,13 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.robot.Constant.shooterConstant;
+import frc.robot.Constant.flyWheelConstant;
 import frc.robot.Constant.KrakenX60;
 import frc.robot.Constant.canBUS;
 
@@ -35,14 +37,11 @@ public class Flywheel extends SubsystemBase{
     private final VelocityVoltage velocityRequest = new VelocityVoltage(0).withSlot(0);
     private final VoltageOut voltageRequest = new VoltageOut(0);
 
-    //TODO: adjust rpm during different circumstances
-    private double dashboardTargetRPM = 2200;
-
-    public Flywheel() {
-        FRMotor = new TalonFX(shooterConstant.FR, canBUS.canivore);
-        BRMotor = new TalonFX(shooterConstant.BR, canBUS.canivore);
-        FLMotor = new TalonFX(shooterConstant.FL, canBUS.canivore);
-        BLMotor = new TalonFX(shooterConstant.BL, canBUS.canivore);
+    public Flywheel() { 
+        FRMotor = new TalonFX(flyWheelConstant.FR, canBUS.canivore);
+        BRMotor = new TalonFX(flyWheelConstant.BR, canBUS.canivore);
+        FLMotor = new TalonFX(flyWheelConstant.FL, canBUS.canivore);
+        BLMotor = new TalonFX(flyWheelConstant.BL, canBUS.canivore);
         motors = List.of(FRMotor, BRMotor, FLMotor, BLMotor);
 
         configureMotor(FRMotor, InvertedValue.Clockwise_Positive);
@@ -71,16 +70,24 @@ public class Flywheel extends SubsystemBase{
             )
             .withSlot0(
                 new Slot0Configs()
-                    .withKP(0.5)
-                    .withKI(2)
-                    .withKD(0)
+                    .withKP(flyWheelConstant.kP)
+                    .withKI(flyWheelConstant.kI)
+                    .withKD(flyWheelConstant.kD)
                     .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond)) // 12 volts when requesting max RPS
             );
         
         motor.getConfigurator().apply(config);
     }
 
-    public void setRPM(double rpm) {
+    private double getTargetRPM(double distanceToHub) {
+        double setRPM = ((-17.04 * Math.pow(distanceToHub, 3)) + (145.7 * Math.pow(distanceToHub, 2)) + (-197.6  * distanceToHub) + 1719) * 0.93;
+        return setRPM;
+    }
+
+    public void setRPM(double rpm) { 
+        if (Math.abs(rpm) > flyWheelConstant.speedLimit) {
+            rpm = flyWheelConstant.speedLimit * Math.signum(rpm);
+        }
         for (final TalonFX motor : motors) { // read and set every motor from list "motors" using ":"
             motor.setControl(
                 velocityRequest
@@ -97,7 +104,6 @@ public class Flywheel extends SubsystemBase{
             );
         }
     }
-
     public void stop() {
         setPercentOutput(0.0);
     }
@@ -108,8 +114,8 @@ public class Flywheel extends SubsystemBase{
             .andThen(Commands.waitUntil(this::isVelocityWithinTolerance));  
     }
 
-    public Command dashboardSpinUpCommand() {
-        return defer(() -> spinUpCommand(dashboardTargetRPM)); 
+    public Command dashboardSpinUpCommand(double distance) {
+        return defer(() -> spinUpCommand(getTargetRPM(distance)));
     }
 
     public boolean isVelocityWithinTolerance() {
@@ -119,5 +125,11 @@ public class Flywheel extends SubsystemBase{
             final AngularVelocity targetVelocity = velocityRequest.getVelocityMeasure();
             return isInVelocityMode && currentVelocity.isNear(targetVelocity, kVelocityTolerance);
         });
+    }
+
+    @Override
+    public void periodic() {
+        SmartDashboard.putNumber("rpm", FRMotor.getVelocity().getValueAsDouble()*60);
+        // SmartDashboard.putNumber("static RPM", rpm);
     }
 }

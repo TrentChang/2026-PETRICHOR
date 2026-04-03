@@ -32,19 +32,13 @@ public class Constant {
         public static final int roller = 32;
         public static final int encoder = 33;
         
-        // PID extend
-        public static final double extendP = 2;
-        public static final double extendI = 0;
-        public static final double extendD = 0;
-        public static final double extendF = 0; 
+        // PID
+        public static final double kP = 10;
+        public static final double kI = 0;
+        public static final double kD = 0;
+        public static final double kS = 0; 
 
-        // PID systole
-        public static final double systoleP = 0;
-        public static final double systoleI = 0;
-        public static final double systoleD = 0;
-        public static final double systoleF = 0;
-        
-        // intake extend Angle
+        // intake Angle
         public static final double extendAngle = 0.0;
         public static final double systoleAngle = 0.0;
         public static final double defaultAngle = 0.0;
@@ -54,14 +48,24 @@ public class Constant {
         //conveyor motor id
         public static final int indexer = 41;
         public static final int roller = 42;
+
+        public static final double transmiss = 0.95;
+        public static final double reverse = -0.95;
+        public static final double stop = 0.0;  
     }
 
-    public static class shooterConstant {
+    public static class flyWheelConstant {
         //shooter motor id
         public static final int FR = 21;
         public static final int BR = 22;
         public static final int FL = 23;
         public static final int BL = 24;
+
+        public static final double kP = 6.8;
+        public static final double kI = 0.0;
+        public static final double kD = 0.0068;
+
+        public static final double speedLimit = 2500;  // RPM
     }
 
     public static class KrakenX60 {
@@ -72,13 +76,13 @@ public class Constant {
         public static final int angle = 25;
         public static final int encoder = 26;
 
-        public static final double minAngel = -1.275;
-        public static final double maxAngle = -0.01;
+        public static final double minAngle = -0.03;
+        public static final double maxAngle = -1.24;
 
-        public static final double kP = 65;
-        public static final double kI = 1.2;
-        public static final double kD = 0.3;
-        public static final double kS = 1.0;
+        public static final double kP = 80;
+        public static final double kI = 0;
+        public static final double kD = 0.05;
+        public static final double kS = 0.08;
     }
 
     public static class limelightConstant {
@@ -88,13 +92,14 @@ public class Constant {
 
     public static class autoAimConstant {
         public static final double maxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+        public static final double maxAngularRate = Units.RotationsPerSecond.of(0.75).in(Units.RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
 
         public static final Angle epsilonAngleToGoal = Degree.of(0.1); //robot will stop if it's in range of 5deg
 
         public static final PIDController rotationController = getRotationController();
 
         private static final PIDController getRotationController() {
-            PIDController controller = new PIDController(3 , 0.0, 0.00514); 
+            PIDController controller = new PIDController(2.5, 0.0, 0.00514); 
             controller.enableContinuousInput(-Math.PI, Math.PI);
             return controller;
         }
@@ -102,8 +107,8 @@ public class Constant {
 
     public static class hubConstants {
         //wpiblue view
-        public static final Pose3d redHubPose = new Pose3d(Units.Meters.of(11.91), Units.Meters.of(4.03), Units.Meters.of(1.83), new Rotation3d());
-        public static final Pose3d blueHubPose = new Pose3d(Units.Meters.of(3.88), Units.Meters.of(4.03),  Units.Meter.of(1.83), new Rotation3d());
+        public static final Pose3d redHubPose = new Pose3d(Units.Meters.of(11.915394), Units.Meters.of(4.0345), Units.Meters.of(1.83), new Rotation3d());
+        public static final Pose3d blueHubPose = new Pose3d(Units.Meters.of(4.625594), Units.Meters.of(4.0345),  Units.Meter.of(1.83), new Rotation3d());
 
         //decide blue or red hub pose by driverstation
         public static final Pose3d getHubPose() {
