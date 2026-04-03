@@ -9,11 +9,11 @@ public class Limelight extends SubsystemBase{
     public static String limelightUsing = "";
 
     public static String limelightUsing() {
-        if (LimelightHelpers.getFiducialID(limelightConstant.FM) != -1) {
-            limelightUsing = limelightConstant.FM;
-        }
-        else if (LimelightHelpers.getFiducialID(limelightConstant.FL) != -1) {
+        if (LimelightHelpers.getFiducialID(limelightConstant.FL) != -1) {
             limelightUsing = limelightConstant.FL;
+        }
+        else if (LimelightHelpers.getFiducialID(limelightConstant.FM) != -1) {
+            limelightUsing = limelightConstant.FM;
         }
 
         return limelightUsing;
@@ -22,10 +22,10 @@ public class Limelight extends SubsystemBase{
     public static Boolean badTagData() {
         badTagData = false;
 
-        if (LimelightHelpers.getFiducialID(limelightConstant.FM) != -1) {
+        if (LimelightHelpers.getFiducialID(limelightConstant.FL) != -1) {
             badTagData = false;
         }
-        else if (LimelightHelpers.getFiducialID(limelightConstant.FL) != -1) {
+        else if (LimelightHelpers.getFiducialID(limelightConstant.FM) != -1) {
             badTagData = false;
         }
         else {
