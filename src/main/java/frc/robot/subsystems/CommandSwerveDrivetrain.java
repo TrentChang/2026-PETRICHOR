@@ -2,7 +2,6 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.*;
 
-import java.lang.annotation.Target;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -19,6 +18,7 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
@@ -51,224 +51,270 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private static final double kSimLoopPeriod = 0.004; // 4 ms
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
-    private static Pose2d targetPose;
     
-        private Pigeon2 m_pigeon2 = new Pigeon2(pigeon2Constant.pigeon2, canBUS.rio);
+    private Pigeon2 m_pigeon2 = new Pigeon2(pigeon2Constant.pigeon2, canBUS.rio);
         
-        // megaTag2
-        private String limelightUsing;
-        LimelightHelpers.PoseEstimate mt2;
-        private final Field2d m_field = new Field2d();
-        private Boolean doRejectUpdate = false;
+    // megaTag2
+    private String limelightUsing;
+    LimelightHelpers.PoseEstimate mt2;
+    private final Field2d m_field = new Field2d();
+    private Boolean doRejectUpdate = false;
     
-        /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
-        private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
-        /* Red alliance sees forward as 180 degrees (toward blue alliance wall) */
-        private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.k180deg;
-        /* Keep track if we've ever applied the operator perspective before or not */
+    /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
+    private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
+    /* Red alliance sees forward as 180 degrees (toward blue alliance wall) */
+    private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.k180deg;
+    /* Keep track if we've ever applied the operator perspective before or not */
         
-        private boolean m_hasAppliedOperatorPerspective = false;
+    private boolean m_hasAppliedOperatorPerspective = false;
     
-        /* Swerve requests to apply during SysId characterization */
-        private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
-        private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
-        private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
+    /* Swerve requests to apply during SysId characterization */
+    private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
+    private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
+    private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
     
-        // private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
-        //         .withDeadband(m_maxSpeed * 0.1) // Add a 10% deadband
-        //         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);// Use open-loop control for drive motors
+    // private final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
+    //         .withDeadband(m_maxSpeed * 0.1) // Add a 10% deadband
+    //         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);// Use open-loop control for drive motors
     
-        /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
-        private final SysIdRoutine m_sysIdRoutineTranslation = new SysIdRoutine(
-            new SysIdRoutine.Config(
-                null,        // Use default ramp rate (1 V/s)
-                Volts.of(4), // Reduce dynamic step voltage to 4 V to prevent brownout
-                null,        // Use default timeout (10 s)
-                // Log state with SignalLogger class
-                state -> SignalLogger.writeString("SysIdTranslation_State", state.toString())
-            ),
-            new SysIdRoutine.Mechanism(
-                output -> setControl(m_translationCharacterization.withVolts(output)),
-                null,
-                this
-            )
-        );
+    /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
+    private final SysIdRoutine m_sysIdRoutineTranslation = new SysIdRoutine(
+        new SysIdRoutine.Config(
+            null,        // Use default ramp rate (1 V/s)
+            Volts.of(4), // Reduce dynamic step voltage to 4 V to prevent brownout
+            null,        // Use default timeout (10 s)
+            // Log state with SignalLogger class
+            state -> SignalLogger.writeString("SysIdTranslation_State", state.toString())
+        ),
+        new SysIdRoutine.Mechanism(
+            output -> setControl(m_translationCharacterization.withVolts(output)),
+            null,
+            this
+        )
+    );
     
-        /* SysId routine for characterizing steer. This is used to find PID gains for the steer motors. */
-        private final SysIdRoutine m_sysIdRoutineSteer = new SysIdRoutine(
-            new SysIdRoutine.Config(
-                null,        // Use default ramp rate (1 V/s)
-                Volts.of(7), // Use dynamic voltage of 7 V
-                null,        // Use default timeout (10 s)
-                // Log state with SignalLogger class
-                state -> SignalLogger.writeString("SysIdSteer_State", state.toString())
-            ),
-            new SysIdRoutine.Mechanism(
-                volts -> setControl(m_steerCharacterization.withVolts(volts)),
-                null,
-                this
-            )
-        );
+    /* SysId routine for characterizing steer. This is used to find PID gains for the steer motors. */
+    private final SysIdRoutine m_sysIdRoutineSteer = new SysIdRoutine(
+        new SysIdRoutine.Config(
+            null,        // Use default ramp rate (1 V/s)
+            Volts.of(7), // Use dynamic voltage of 7 V
+            null,        // Use default timeout (10 s)
+            // Log state with SignalLogger class
+            state -> SignalLogger.writeString("SysIdSteer_State", state.toString())
+        ),
+        new SysIdRoutine.Mechanism(
+            volts -> setControl(m_steerCharacterization.withVolts(volts)),
+            null,
+            this
+        )
+    );
     
         /*
-         * SysId routine for characterizing rotation.
-         * This is used to find PID gains for the FieldCentricFacingAngle HeadingController.
-         * See the documentation of SwerveRequest.SysIdSwerveRotation for info on importing the log to SysId.
-         */
-        private final SysIdRoutine m_sysIdRoutineRotation = new SysIdRoutine(
+     * SysId routine for characterizing rotation.
+     * This is used to find PID gains for the FieldCentricFacingAngle
+     * HeadingController.
+     * See the documentation of SwerveRequest.SysIdSwerveRotation for info on
+     * importing the log to SysId.
+     */
+    private final SysIdRoutine m_sysIdRoutineRotation = new SysIdRoutine(
             new SysIdRoutine.Config(
-                /* This is in radians per second², but SysId only supports "volts per second" */
-                Volts.of(Math.PI / 6).per(Second),
-                /* This is in radians per second, but SysId only supports "volts" */
-                Volts.of(Math.PI),
-                null, // Use default timeout (10 s)
-                // Log state with SignalLogger class
-                state -> SignalLogger.writeString("SysIdRotation_State", state.toString())
-            ),
+                    /* This is in radians per second², but SysId only supports "volts per second" */
+                    Volts.of(Math.PI / 6).per(Second),
+                    /* This is in radians per second, but SysId only supports "volts" */
+                    Volts.of(Math.PI),
+                    null, // Use default timeout (10 s)
+                    // Log state with SignalLogger class
+                    state -> SignalLogger.writeString("SysIdRotation_State", state.toString())),
             new SysIdRoutine.Mechanism(
-                output -> {
-                    /* output is actually radians per second, but SysId only supports "volts" */
-                    setControl(m_rotationCharacterization.withRotationalRate(output.in(Volts)));
-                    /* also log the requested output for SysId */
-                    SignalLogger.writeDouble("Rotational_Rate", output.in(Volts));
-                },
-                null,
-                this
-            )
-        );
-    
-        /* The SysId routine to test */
-        private SysIdRoutine m_sysIdRoutineToApply = m_sysIdRoutineTranslation;
-    
-       /**
-         * Constructs a CTRE SwerveDrivetrain using the specified constants.
-         * <p>
-         * This constructs the underlying hardware devices, so users should not construct
-         * the devices themselves. If they need the devices, they can access them through
-         * getters in the classes.
-         *
-         * @param drivetrainConstants   Drivetrain-wide constants for the swerve drive
-         * @param modules               Constants for each specific module
-         */
-        public CommandSwerveDrivetrain(
+                    output -> {
+                        /* output is actually radians per second, but SysId only supports "volts" */
+                        setControl(m_rotationCharacterization.withRotationalRate(output.in(Volts)));
+                        /* also log the requested output for SysId */
+                        SignalLogger.writeDouble("Rotational_Rate", output.in(Volts));
+                    },
+                    null,
+                    this));
+
+    /* The SysId routine to test */
+    private SysIdRoutine m_sysIdRoutineToApply = m_sysIdRoutineTranslation;
+
+    /**
+     * Constructs a CTRE SwerveDrivetrain using the specified constants.
+     * <p>
+     * This constructs the underlying hardware devices, so users should not
+     * construct
+     * the devices themselves. If they need the devices, they can access them
+     * through
+     * getters in the classes.
+     *
+     * @param drivetrainConstants Drivetrain-wide constants for the swerve drive
+     * @param modules             Constants for each specific module
+     */
+    public CommandSwerveDrivetrain(
             SwerveDrivetrainConstants drivetrainConstants,
-            SwerveModuleConstants<?, ?, ?>... modules
-        ) {
-            super(drivetrainConstants, modules);
-            if (Utils.isSimulation()) {
-                startSimThread();
-            }
+            SwerveModuleConstants<?, ?, ?>... modules) {
+        super(drivetrainConstants, modules);
+        if (Utils.isSimulation()) {
+            startSimThread();
         }
-    
-        /**
-         * Constructs a CTRE SwerveDrivetrain using the specified constants.
-         * <p>
-         * This constructs the underlying hardware devices, so users should not construct
-         * the devices themselves. If they need the devices, they can access them through
-         * getters in the classes.
-         *
-         * @param drivetrainConstants     Drivetrain-wide constants for the swerve drive
-         * @param odometryUpdateFrequency The frequency to run the odometry loop. If
-         *                                unspecified or set to 0 Hz, this is 250 Hz on
-         *                                CAN FD, and 100 Hz on CAN 2.0.
-         * @param modules                 Constants for each specific module
-         */
-        public CommandSwerveDrivetrain(
+    }
+
+    /**
+     * Constructs a CTRE SwerveDrivetrain using the specified constants.
+     * <p>
+     * This constructs the underlying hardware devices, so users should not
+     * construct
+     * the devices themselves. If they need the devices, they can access them
+     * through
+     * getters in the classes.
+     *
+     * @param drivetrainConstants     Drivetrain-wide constants for the swerve drive
+     * @param odometryUpdateFrequency The frequency to run the odometry loop. If
+     *                                unspecified or set to 0 Hz, this is 250 Hz on
+     *                                CAN FD, and 100 Hz on CAN 2.0.
+     * @param modules                 Constants for each specific module
+     */
+    public CommandSwerveDrivetrain(
             SwerveDrivetrainConstants drivetrainConstants,
             double odometryUpdateFrequency,
-            SwerveModuleConstants<?, ?, ?>... modules
-        ) {
-            super(drivetrainConstants, odometryUpdateFrequency, modules);
-            if (Utils.isSimulation()) {
-                startSimThread();
-            }
+            SwerveModuleConstants<?, ?, ?>... modules) {
+        super(drivetrainConstants, odometryUpdateFrequency, modules);
+        if (Utils.isSimulation()) {
+            startSimThread();
         }
-    
-        /**
-         * Constructs a CTRE SwerveDrivetrain using the specified constants.
-         * <p>
-         * This constructs the underlying hardware devices, so users should not construct
-         * the devices themselves. If they need the devices, they can access them through
-         * getters in the classes.
-         *
-         * @param drivetrainConstants       Drivetrain-wide constants for the swerve drive
-         * @param odometryUpdateFrequency   The frequency to run the odometry loop. If
-         *                                  unspecified or set to 0 Hz, this is 250 Hz on
-         *                                  CAN FD, and 100 Hz on CAN 2.0.
-         * @param odometryStandardDeviation The standard deviation for odometry calculation
-         *                                  in the form [x, y, theta]ᵀ, with units in meters
-         *                                  and radians
-         * @param visionStandardDeviation   The standard deviation for vision calculation
-         *                                  in the form [x, y, theta]ᵀ, with units in meters
-         *                                  and radians
-         * @param modules                   Constants for each specific module
-         */
-        public CommandSwerveDrivetrain(
+    }
+
+    /**
+     * Constructs a CTRE SwerveDrivetrain using the specified constants.
+     * <p>
+     * This constructs the underlying hardware devices, so users should not
+     * construct
+     * the devices themselves. If they need the devices, they can access them
+     * through
+     * getters in the classes.
+     *
+     * @param drivetrainConstants       Drivetrain-wide constants for the swerve
+     *                                  drive
+     * @param odometryUpdateFrequency   The frequency to run the odometry loop. If
+     *                                  unspecified or set to 0 Hz, this is 250 Hz
+     *                                  on
+     *                                  CAN FD, and 100 Hz on CAN 2.0.
+     * @param odometryStandardDeviation The standard deviation for odometry
+     *                                  calculation
+     *                                  in the form [x, y, theta]ᵀ, with units in
+     *                                  meters
+     *                                  and radians
+     * @param visionStandardDeviation   The standard deviation for vision
+     *                                  calculation
+     *                                  in the form [x, y, theta]ᵀ, with units in
+     *                                  meters
+     *                                  and radians
+     * @param modules                   Constants for each specific module
+     */
+    public CommandSwerveDrivetrain(
             SwerveDrivetrainConstants drivetrainConstants,
             double odometryUpdateFrequency,
             Matrix<N3, N1> odometryStandardDeviation,
             Matrix<N3, N1> visionStandardDeviation,
-            SwerveModuleConstants<?, ?, ?>... modules
-        ) {
-            super(drivetrainConstants, odometryUpdateFrequency, odometryStandardDeviation, visionStandardDeviation, modules);
-            if (Utils.isSimulation()) {
-                startSimThread();
-            }
+            SwerveModuleConstants<?, ?, ?>... modules) {
+        super(drivetrainConstants, odometryUpdateFrequency, odometryStandardDeviation, visionStandardDeviation,
+                modules);
+        if (Utils.isSimulation()) {
+            startSimThread();
         }
+    }
+
+    /**
+     * Returns a command that applies the specified control request to this swerve
+     * drivetrain.
+     *
+     * @param request Function returning the request to apply
+     * @return Command to run
+     */
+    public Command applyRequest(Supplier<SwerveRequest> request) {
+        return run(() -> this.setControl(request.get()));
+    }
+
+    /**
+     * Runs the SysId Quasistatic test in the given direction for the routine
+     * specified by {@link #m_sysIdRoutineToApply}.
+     *
+     * @param direction Direction of the SysId Quasistatic test
+     * @return Command to run
+     */
     
-        /**
-         * Returns a command that applies the specified control request to this swerve drivetrain.
-         *
-         * @param request Function returning the request to apply
-         * @return Command to run
-         */
-        public Command applyRequest(Supplier<SwerveRequest> request) {
-            return run(() -> this.setControl(request.get()));
-        }
-    
-        /**
-         * Runs the SysId Quasistatic test in the given direction for the routine
-         * specified by {@link #m_sysIdRoutineToApply}.
-         *
-         * @param direction Direction of the SysId Quasistatic test
-         * @return Command to run
-         */
-        public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
-            return m_sysIdRoutineToApply.quasistatic(direction);
-        }
-    
-        /**
-         * Runs the SysId Dynamic test in the given direction for the routine
-         * specified by {@link #m_sysIdRoutineToApply}.
-         *
-         * @param direction Direction of the SysId Dynamic test
-         * @return Command to run
-         */
-        public Command sysIdDynamic(SysIdRoutine.Direction direction) {
-            return m_sysIdRoutineToApply.dynamic(direction);
-        }
+    public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+        return m_sysIdRoutineToApply.quasistatic(direction);
+    }
+
+    /**
+     * Runs the SysId Dynamic test in the given direction for the routine
+     * specified by {@link #m_sysIdRoutineToApply}.
+     *
+     * @param direction Direction of the SysId Dynamic test
+     * @return Command to run
+     */
+    public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+        return m_sysIdRoutineToApply.dynamic(direction);
+    }
     
     // Auto align
-    private static Rotation2d getAimigRotation(Pose2d robotPose) {
-        targetPose = hubConstants.getHubPose().toPose2d();
-        Translation2d targetToBot = targetPose.relativeTo(robotPose).getTranslation();
-        return new Rotation2d(targetToBot.getX(), targetToBot.getY());
+    public double getDistanceToTarget() {
+        Pose2d robotPose2d = getState().Pose;
+        Pose2d targetPose2d = hubConstants.getHubPose().toPose2d();
+        return robotPose2d.getTranslation().getDistance(targetPose2d.getTranslation());
     }
 
-    public double getDistanceToTarget(Pose2d robotPose) {
-        return robotPose.getTranslation().getDistance(targetPose.getTranslation());
-    }
-
-    public final SwerveRequest.FieldCentricFacingAngle alignDrive = new SwerveRequest.FieldCentricFacingAngle()
-        .withTargetDirection(getAimigRotation(getState().Pose));
+    public final SwerveRequest.FieldCentric alignDrive = new SwerveRequest.FieldCentric()
+            .withDeadband(autoAimConstant.maxSpeed * 0.1)
+            .withRotationalDeadband(autoAimConstant.maxAngularRate * 0.01) // Add a 10% deadband
+            .withDriveRequestType(DriveRequestType.OpenLoopVoltage)
+             // use SwerveModule DrvieRequestType import instead of Legacy
+            .withCenterOfRotation(new Translation2d(0, -0.2));
 
     public Command autoAlignCommand(CommandXboxController driverCtrl) {
         return applyRequest(() -> {
-            double vx = -driverCtrl.getLeftY() * autoAimConstant.maxSpeed;
-            double vy = -driverCtrl.getLeftX() * autoAimConstant.maxSpeed;
-            return alignDrive
-                .withVelocityX(vx) // Drive forward with negative Y (forward)
-                .withVelocityY(vy); // Drive left with negative X (left)
+            double controllerVelX = -driverCtrl.getLeftX();
+            double controllerVelY = -driverCtrl.getLeftY();
+
+            Pose2d drivePose = getState().Pose;
+            Pose2d targetPose = hubConstants.getHubPose().toPose2d();
+            
+            Translation2d deltaDis = targetPose.getTranslation().minus(drivePose.getTranslation());
+            
+            Rotation2d desiredAngle = deltaDis.getAngle();
+            Rotation2d currentAngle = drivePose.getRotation();
+            Rotation2d deltaAngle = currentAngle.minus(desiredAngle);
+            SmartDashboard.putNumber("desiredAngle", desiredAngle.getDegrees());
+            SmartDashboard.putNumber("currentAngle", currentAngle.getDegrees());
+            
+            double wrappedAngleDeg = MathUtil.inputModulus(deltaAngle.getDegrees(), -180, 180);
+            int doReverse = DriverStation.getAlliance().equals(Optional.of(Alliance.Blue)) ? 1 : -1;
+            
+            if ((Math.abs(wrappedAngleDeg) < autoAimConstant.epsilonAngleToGoal.in(Degrees)) // if facing goal already
+               && Math.hypot(controllerVelX, controllerVelY) < 0.1) {
+                return new SwerveRequest.SwerveDriveBrake();
+            } else {
+                double vx = controllerVelY * autoAimConstant.maxSpeed;
+                double vy = controllerVelX * autoAimConstant.maxSpeed;
+                
+                // feedforward
+                double dx = deltaDis.getX(), dy = deltaDis.getY();
+                double rSquare = (dx*dx + dy*dy);
+                
+                double vw = doReverse*((dy*vx - dx*vy)) / rSquare ;
+                    
+                // feedback
+                double feedback = autoAimConstant.rotationController.calculate(currentAngle.getRadians(), desiredAngle.getRadians());
+
+                vw += feedback;
+                vw = MathUtil.clamp(vw, -autoAimConstant.maxAngularRate, autoAimConstant.maxAngularRate);
+
+                return alignDrive
+                        .withVelocityX(vx) // Drive forward with negative Y (forward)
+                        .withVelocityY(vy) // Drive left with negative X (left)
+                        .withRotationalRate(vw*3); // Use angular rate for rotation (rad/s)
+            }
         });
     };
 
@@ -296,6 +342,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         
         m_field.setRobotPose(getState().Pose);
         SmartDashboard.putData("Field2D", m_field);
+        SmartDashboard.putNumber("distance to hub", getDistanceToTarget());
 
         /*%
          * Periodically try to apply the operator perspective.

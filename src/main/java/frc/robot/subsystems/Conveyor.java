@@ -11,12 +11,17 @@ public class Conveyor extends SubsystemBase{
     private final TalonFX conveyorRoller = new TalonFX(conveyorConstant.roller, canBUS.canivore);
 
     public void conveyorTransmiss() {
-        conveyorIndexer.set(0.5);
-        conveyorRoller.set(0.5);
+        conveyorIndexer.set(conveyorConstant.transmiss);
+        conveyorRoller.set(conveyorConstant.transmiss);
+    }
+
+    public void converyorReverse() {
+        conveyorIndexer.set(conveyorConstant.reverse);
+        conveyorRoller.set(conveyorConstant.reverse);
     }
 
     public void converyStop() {
-        conveyorIndexer.set(0);
-        conveyorRoller.set(0);
+        conveyorIndexer.set(conveyorConstant.stop);
+        conveyorRoller.set(conveyorConstant.stop);
     }
 }

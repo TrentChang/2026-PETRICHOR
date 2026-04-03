@@ -6,14 +6,17 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.util.function.Supplier;
+
+import org.ejml.ops.ConvertMatrixData;
+
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import frc.robot.Constant.hoodConstant;
-import frc.robot.commands.autoAim;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.Conveyor;
@@ -41,33 +44,32 @@ public class RobotContainer {
     public final Flywheel flywheel = new Flywheel();
     public final Hood hood = new Hood();
 
-    // Command
-    public final autoAim mAutoAim = new autoAim(drivetrain, joystick);
-
     public RobotContainer() {
         configureBindings();
     }
 
     private void configureBindings() {
-        // joystick.a().whileTrue(new InstantCommand(conveyor::conveyorTransmiss, conveyor))
-        //             .onFalse(new InstantCommand(conveyor::converyStop, conveyor));
-        joystick.b().whileTrue(flywheel.dashboardSpinUpCommand())
-                    .onFalse(new InstantCommand(flywheel::stop, flywheel));
+        joystick.a().whileTrue(drivetrain.autoAlignCommand(joystick)
+                                .alongWith(hood.hoodSetPos((drivetrain::getDistanceToTarget))))
+                    .onFalse(new InstantCommand(hood::setPosLow, hood));
+
+        joystick.b().whileTrue(new InstantCommand(conveyor::conveyorTransmiss, conveyor)
+                                .alongWith(flywheel.dashboardSpinUpCommand(drivetrain.getDistanceToTarget())))
+                    .onFalse(new InstantCommand(conveyor::converyStop, conveyor)
+                                .alongWith(new InstantCommand(flywheel::stop, flywheel)));
         // joystick.x().onTrue(new InstantCommand(intake::intakeExtend, intake));
         // joystick.y().onTrue(new InstantCommand(intake::intakeSystole, intake));
+        // joystick.a().whileTrue(new InstantCommand(intake::intakeInhale, intake))
+        //             .onFalse(new InstantCommand(intake::intakeStop, intake));
 
-        joystick.a().whileTrue(mAutoAim);
-        joystick.x().onTrue(new InstantCommand(hood::setPosLow, hood));
-        joystick.y().onTrue(new InstantCommand(hood::setPosHigh, hood));
-
-        // Note that X is defined as forward according to WPILib convention,
+        // Note that X is defined as forward according to WPILib convention, 
         // and Y is defined as to the left according to WPILib convention.
         drivetrain.setDefaultCommand(
             // Drivetrain will execute this command periodically
             drivetrain.applyRequest(() ->
                 drive.withVelocityX(-joystick.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
                     .withVelocityY(-joystick.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-                    .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+                    .withRotationalRate(-joystick.getRightX() * 2.5 /*3 */ * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
 
