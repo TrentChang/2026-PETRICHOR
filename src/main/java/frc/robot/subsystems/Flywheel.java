@@ -6,6 +6,7 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
@@ -80,7 +81,7 @@ public class Flywheel extends SubsystemBase{
     }
 
     private double getTargetRPM(double distanceToHub) {
-        double setRPM = ((-17.04 * Math.pow(distanceToHub, 3)) + (145.7 * Math.pow(distanceToHub, 2)) + (-197.6  * distanceToHub) + 1719) * 0.93;
+        double setRPM = ((-17.04 * Math.pow(distanceToHub, 3)) + (145.7 * Math.pow(distanceToHub, 2)) + (-197.6  * distanceToHub) + 1719) * 0.9;        
         return setRPM;
     }
 
@@ -115,7 +116,7 @@ public class Flywheel extends SubsystemBase{
     }
 
     public Command dashboardSpinUpCommand(double distance) {
-        return defer(() -> spinUpCommand(getTargetRPM(distance)));
+        return defer(() -> spinUpCommand(distance));
     }
 
     public boolean isVelocityWithinTolerance() {

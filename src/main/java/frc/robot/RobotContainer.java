@@ -17,6 +17,8 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+import frc.robot.Constant.flyWheelConstant;
+import frc.robot.commands.aimAuto;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.Conveyor;
@@ -44,23 +46,17 @@ public class RobotContainer {
     public final Flywheel flywheel = new Flywheel();
     public final Hood hood = new Hood();
 
+    public final aimAuto aimAuto = new aimAuto(drivetrain, joystick, hood);
+
     public RobotContainer() {
         configureBindings();
     }
 
     private void configureBindings() {
-        joystick.a().whileTrue(drivetrain.autoAlignCommand(joystick)
-                                .alongWith(hood.hoodSetPos((drivetrain::getDistanceToTarget))))
-                    .onFalse(new InstantCommand(hood::setPosLow, hood));
-
-        joystick.b().whileTrue(new InstantCommand(conveyor::conveyorTransmiss, conveyor)
-                                .alongWith(flywheel.dashboardSpinUpCommand(drivetrain.getDistanceToTarget())))
-                    .onFalse(new InstantCommand(conveyor::converyStop, conveyor)
-                                .alongWith(new InstantCommand(flywheel::stop, flywheel)));
-        // joystick.x().onTrue(new InstantCommand(intake::intakeExtend, intake));
-        // joystick.y().onTrue(new InstantCommand(intake::intakeSystole, intake));
-        // joystick.a().whileTrue(new InstantCommand(intake::intakeInhale, intake))
-        //             .onFalse(new InstantCommand(intake::intakeStop, intake));
+        joystick.a().whileTrue(aimAuto).onFalse(new InstantCommand(hood::setPosLow, hood));
+        joystick.b().whileTrue(flywheel.dashboardSpinUpCommand(drivetrain.getDistanceToTarget())).onFalse(new InstantCommand(conveyor::converyStop
+        , conveyor).alongWith(new InstantCommand(flywheel::stop, flywheel)));
+        
 
         // Note that X is defined as forward according to WPILib convention, 
         // and Y is defined as to the left according to WPILib convention.
