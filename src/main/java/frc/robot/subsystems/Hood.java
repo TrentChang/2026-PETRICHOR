@@ -73,8 +73,15 @@ public class Hood extends SubsystemBase {
     }
     
     public void setPosHigh() {
+        hoodMotor.setControl(m_positionVoltage.withPosition(maxAngle)); 
+    }
 
-        hoodMotor.setControl(m_positionVoltage.withPosition(-0.8)); 
+    public void fromNeutralZone() {
+        hoodMotor.setControl(m_positionVoltage.withPosition(hoodConstant.fromNeutralZone));
+    }
+
+    public void backupShoot() {
+        hoodMotor.setControl(m_positionVoltage.withPosition(hoodConstant.backupShoot));
     }
 
     @Override   
