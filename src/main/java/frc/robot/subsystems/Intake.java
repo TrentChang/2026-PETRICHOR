@@ -3,11 +3,8 @@ package frc.robot.subsystems;
 import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.configs.FeedbackConfigs;
-import com.ctre.phoenix6.configs.MotionMagicConfigs;
-import com.ctre.phoenix6.configs.Slot0Configs;
-import com.ctre.phoenix6.configs.Slot1Configs;
+
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.MotionMagicDutyCycle;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -33,10 +30,15 @@ public class Intake extends SubsystemBase{
             .withFeedbackSensorSource(FeedbackSensorSourceValue.FusedCANcoder)
             .withFeedbackRemoteSensorID(intakeConstant.encoder)
             .withSensorToMechanismRatio(1));
-        configs.Slot0.kP = intakeConstant.kP;
-        configs.Slot0.kI = intakeConstant.kI;
-        configs.Slot0.kD = intakeConstant.kD;
-        configs.Slot0.kS = intakeConstant.kS;
+        configs.Slot0.kP = intakeConstant.kP0;
+        configs.Slot0.kI = intakeConstant.kI0;
+        configs.Slot0.kD = intakeConstant.kD0;  
+        configs.Slot0.kS = intakeConstant.kS0;
+
+        configs.Slot1.kP = intakeConstant.kP1;
+        configs.Slot1.kI = intakeConstant.kI1;
+        configs.Slot1.kD = intakeConstant.kD1;
+        configs.Slot1.kS = intakeConstant.kS1;
         
         configs.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
 
@@ -50,22 +52,26 @@ public class Intake extends SubsystemBase{
 
     // intake extend
     public void intakeExtend() {
-        intakeExtend.setControl(m_positionVoltage.withPosition(4.0));
+        intakeExtend.setControl(m_positionVoltage.withPosition(intakeConstant.extendAngle).withSlot(0));
     }
 
     // intake systole
     public void intakeSystole() {
-        intakeExtend.setControl(m_positionVoltage.withPosition(0.5));
+        intakeExtend.setControl(m_positionVoltage.withPosition(intakeConstant.systoleAngle).withSlot(1));
     }
 
-    // intake setzero
-    // public void intakeSetPosDefault() {
-    //     intakeExtend.setControl(new MotionMagicDutyCycle(null).withSlot(0));
-    // }
+    // intake default
+    public void intakeDefault() {
+        intakeExtend.setControl(m_positionVoltage.withPosition(intakeConstant.defaultAngle).withSlot(1));
+    }
 
     // intaking
     public void intakeInhale() {
-        intakeRoller.set(0.25);
+        intakeRoller.set(-0.9);
+    }
+
+    public void intakeReverse() {
+        intakeRoller.set(0.9);
     }
 
     // stop
