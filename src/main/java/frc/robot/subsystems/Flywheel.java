@@ -45,10 +45,10 @@ public class Flywheel extends SubsystemBase{
         BLMotor = new TalonFX(flyWheelConstant.BL, canBUS.canivore);
         motors = List.of(FRMotor, BRMotor, FLMotor, BLMotor);
 
-        configureMotor(FRMotor, InvertedValue.Clockwise_Positive);
-        configureMotor(BRMotor, InvertedValue.Clockwise_Positive);
-        configureMotor(FLMotor, InvertedValue.CounterClockwise_Positive);
-        configureMotor(BLMotor, InvertedValue.CounterClockwise_Positive);
+        configureMotor(FRMotor, InvertedValue.CounterClockwise_Positive);
+        configureMotor(BRMotor, InvertedValue.CounterClockwise_Positive);
+        configureMotor(FLMotor, InvertedValue.Clockwise_Positive);
+        configureMotor(BLMotor, InvertedValue.Clockwise_Positive);
     }
 
     private void configureMotor(TalonFX motor, InvertedValue invertedDirection) {
@@ -60,13 +60,14 @@ public class Flywheel extends SubsystemBase{
             )
             .withVoltage(
                 new VoltageConfigs()
-                    .withPeakReverseVoltage(Volts.of(0))
+                    .withPeakForwardVoltage(Volts.of(12))
+                    .withPeakReverseVoltage(Volts.of(-12))
             )
             .withCurrentLimits(
                 new CurrentLimitsConfigs()
                     .withStatorCurrentLimit(Amps.of(120))
                     .withStatorCurrentLimitEnable(true)
-                    .withSupplyCurrentLimit(Amps.of(70))
+                    .withSupplyCurrentLimit(Amps.of(75))
                     .withSupplyCurrentLimitEnable(true)
             )
             .withSlot0(
@@ -76,12 +77,13 @@ public class Flywheel extends SubsystemBase{
                     .withKD(flyWheelConstant.kD)
                     .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond)) // 12 volts when requesting max RPS
             );
+            // TODO: if needed use ramp to set speed up period 
         
         motor.getConfigurator().apply(config);
     }
 
     private double getTargetRPM(double distanceToHub) {
-        double setRPM = ((-17.04 * Math.pow(distanceToHub, 3)) + (145.7 * Math.pow(distanceToHub, 2)) + (-197.6  * distanceToHub) + 1719) * 0.9;        
+        double setRPM = ((-17.04 * Math.pow(distanceToHub, 3)) + (145.7 * Math.pow(distanceToHub, 2)) + (-197.6  * distanceToHub) + 1719) * 0.93;        
         return setRPM;
     }
 
@@ -116,7 +118,15 @@ public class Flywheel extends SubsystemBase{
     }
 
     public Command dashboardSpinUpCommand(double distance) {
-        return defer(() -> spinUpCommand(distance));
+        return defer(() -> spinUpCommand(getTargetRPM(distance)));
+    }
+
+    public Command backupSpinupCommand(double rpm) {
+        return defer(() -> spinUpCommand(rpm));
+    }
+
+    public Command fromNeutralZoneSpinupCommand(double rpm) {
+        return defer(() -> spinUpCommand(rpm));
     }
 
     public boolean isVelocityWithinTolerance() {
